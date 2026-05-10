@@ -1,109 +1,147 @@
-# Hướng Dẫn Sử Dụng & Tài Liệu Công Nghệ - PubliCast
+# Hướng Dẫn Sử Dụng & Tài Liệu: Tính Năng Đăng Ký - PubliCast
 
-Tài liệu này tổng hợp các công nghệ đã sử dụng và các bước để thiết lập dự án dành cho bạn và 3 thành viên còn lại trong team.
+Tài liệu này tập trung vào chức năng **Đăng ký tài khoản (Registration)** và **Xác thực OTP qua Email**, giúp các thành viên trong team nắm vững quy trình thiết lập và luồng hoạt động của hệ thống.
 
 ---
 
-## 🛠️ Công Nghệ Đã Sử Dụng
-
-Dự án hiện tại đang áp dụng các công nghệ hiện đại, đảm bảo tính mở rộng (Scalability) và tuân thủ nguyên tắc SOLID:
+## 🛠️ Công Nghệ Sử Dụng
 
 - **Ngôn ngữ & Framework:** NodeJS, ExpressJS.
-- **Cơ sở dữ liệu:** MySQL 8.0 (Được đóng gói trong Docker).
-- **ORM & Migration:** **Prisma** (Thay thế cho Sequelize vì tính tiện dụng, tự động sinh code và type-safe).
-- **Bộ nhớ đệm (Dự kiến):** Redis (Dùng để lưu mã OTP xác thực tạm thời).
-- **Công cụ Dev:** Docker, Git.
+- **Cơ sở dữ liệu:** MySQL 8.0, Redis (Lưu mã OTP).
+- **ORM:** Prisma (Quản lý Database).
+- **Thư viện chính (Code):**
+  - `bcryptjs`: Mã hóa mật khẩu.
+  - `express-validator`: Validate dữ liệu đầu vào.
+  - `express-rate-limit`: Giới hạn request (Spam protection).
+  - `nodemailer`: Gửi email xác thực.
+  - `jest` & `supertest`: Kiểm thử tự động.
 
 ---
 
-## 📁 Cấu Trúc Dự Án Hiện Tại
-
-```text
-PubliCast/
-├── prisma/
-│   ├── migrations/         # Lịch sử các file migration SQL do Prisma tự sinh
-│   └── schema.prisma       # File "Bản đồ" định nghĩa cấu trúc Database
-├── .env.example            # File mẫu chứa các biến môi trường
-├── .gitignore              # Các file/thư mục bỏ qua không đẩy lên Git
-├── docker-compose.yml      # File cấu hình chạy MySQL bằng Docker
-├── login-sequence.puml     # Use Case Diagram (Sơ đồ ca sử dụng)
-├── package.json            # Quản lý thư viện dự án
-└── README.md               # File hướng dẫn này
-```
-
----
-
-## 🚀 Các Bước Thiết Lập Dự Án (Dành cho người mới)
-
-Khi 3 thành viên còn lại kéo code từ GitHub về, họ chỉ cần thực hiện các bước sau để chạy dự án:
+## 🚀 Các Bước Thiết Lập Dự Án
 
 ### Bước 1: Cài đặt thư viện
-
 ```bash
 npm install
 ```
 
-_(Lệnh này cũng sẽ tự động sinh ra Prisma Client trong `node_modules` của họ)._
-
-### Bước 2: Khởi động Database (Docker)
-
-Đảm bảo Docker đã được bật trên máy. Chạy lệnh sau để kéo và chạy MySQL:
-
+### Bước 2: Khởi động Hạ tầng (Docker)
+Đảm bảo Docker đang chạy, sau đó khởi động MySQL (mặc định cổng `3307`) và Redis:
 ```bash
 docker compose up -d
 ```
 
-_Lưu ý: MySQL được cấu hình chạy ở cổng `3307` để tránh trùng lặp với MySQL có sẵn trên máy._
-
-### Bước 3: Tạo file `.env`
-
-Nhân bản file `.env.example` thành `.env` để sử dụng:
-
+### Bước 3: Cấu hình Môi trường
+Sao chép `.env.example` thành `.env` và điền đầy đủ thông tin cấu hình Email (GMAIL_USER, GMAIL_PASS):
 ```bash
-# Trên Windows (PowerShell)
+# Windows (PowerShell)
 copy .env.example .env
 
-# Trên Linux/macOS
+# Linux/macOS
 cp .env.example .env
 ```
 
-### Bước 4: Khởi tạo Database (Migration)
-
-Chạy lệnh sau để Prisma tự động tạo các bảng `users` và `user_accounts` trong MySQL của họ:
-
+### Bước 4: Khởi tạo Database
+Chạy migration để tạo các bảng cần thiết trong MySQL:
 ```bash
 npx prisma migrate dev
 ```
 
 ---
 
-## 📝 Hướng Dẫn Code Với Prisma (Cơ bản)
+## 🔄 Quy Trình Đăng Ký (Workflow)
 
-Để sử dụng Database trong code, hãy tuân thủ nguyên tắc Singleton (chỉ tạo 1 instance):
+Hệ thống hoạt động theo 2 giai đoạn chính nhằm đảm bảo tính xác thực:
 
-**Tạo file `src/prisma.js`:**
+### Giai đoạn 1: Đăng ký tài khoản
+1. **Validation**: Kiểm tra email hợp lệ, mật khẩu tối thiểu 8 ký tự, xác nhận mật khẩu khớp.
+2. **Kiểm tra trùng lặp**: Đảm bảo Email chưa tồn tại trong hệ thống.
+3. **Lưu trữ**: Tạo bản ghi User trong MySQL với trạng thái `INACTIVE`.
+4. **OTP**: Sinh mã 6 số ngẫu nhiên, lưu vào **Redis** với thời gian hết hạn (10 phút).
+5. **Thông báo**: Gửi email chứa mã OTP đến địa chỉ email người dùng đã đăng ký.
 
-```javascript
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-module.exports = prisma;
+### Giai đoạn 2: Xác minh OTP (Kích hoạt tài khoản)
+1. **Truy vấn Redis**: Lấy mã OTP đã lưu dựa trên Email.
+2. **So sánh**: Nếu khớp, cập nhật trạng thái User thành `ACTIVE` trong MySQL và xóa OTP khỏi Redis.
+
+---
+
+## 📝 Hướng Dẫn Sử Dụng API (Dành cho Frontend)
+
+### 1. API Đăng ký (Register)
+- **Method:** `POST`
+- **Endpoint:** `/api/auth/register`
+- **Body:**
+```json
+{
+  "name": "Nguyen Van A",
+  "email": "test@example.com",
+  "password": "password123",
+  "confirmPassword": "password123"
+}
 ```
 
-**Sử dụng trong file logic:**
-
-```javascript
-const prisma = require("./prisma");
-
-// Lấy danh sách user
-const users = await prisma.user.findMany();
-
-// Tạo user mới
-const newUser = await prisma.user.create({
-  data: {
-    email: "test@example.com",
-    fullName: "Nguyen Van A",
-  },
-});
+### 2. API Xác minh OTP (Verify OTP)
+- **Method:** `POST`
+- **Endpoint:** `/api/auth/verify-otp`
+- **Body:**
+```json
+{
+  "email": "test@example.com",
+  "otp": "123456"
+}
 ```
 
-Chúc team bạn làm việc hiệu quả! 🚀
+---
+
+## 💻 Hướng Dẫn Code (Dành cho Backend)
+
+Để mở rộng hoặc chỉnh sửa logic đăng ký, hãy làm việc với các thành phần sau:
+
+**1. Repository (Thao tác Database):**
+Sử dụng `UserRepository` để quản lý bản ghi User và Account:
+```javascript
+const userRepository = require('../repositories/user.repository');
+
+// Tạo user mới kèm account (provider: LOCAL)
+const user = await userRepository.createUser(
+  { fullName: "A", email: "a@ex.com", status: "INACTIVE" },
+  { provider: "LOCAL", passwordHash: "..." }
+);
+```
+
+**2. Service (Logic nghiệp vụ):**
+Logic đăng ký được đóng gói trong `AuthService.register`:
+```javascript
+// Quy trình chuẩn trong Service:
+const existingUser = await userRepository.findByEmail(email);
+if (existingUser) throw new Error("Email exists");
+
+const passwordHash = await bcrypt.hash(password, 10);
+const user = await userRepository.createUser(...);
+
+const otp = await otpService.generateOTP();
+await otpService.saveOTP(email, otp);
+await emailService.sendOTP(email, otp);
+```
+
+**3. Constants (Hằng số):**
+Tuyệt đối không sử dụng Magic String. Hãy định nghĩa và sử dụng `ERROR_MESSAGES` hoặc `USER_STATUS` trong `src/utils/constants.js`.
+
+---
+
+## 📁 Cấu Trúc Module Đăng Ký
+- `src/controllers/auth.controller.js`: Tiếp nhận request và điều hướng phản hồi.
+- `src/services/auth.service.js`: Chứa Business Logic (Đăng ký, Xác thực).
+- `src/services/otp.service.js`: Quản lý lưu trữ và kiểm tra mã OTP với Redis.
+- `src/services/email/`: Triển khai Strategy gửi Email (Nodemailer).
+- `src/repositories/user.repository.js`: Thao tác trực tiếp với Database qua Prisma.
+
+---
+
+## 🧪 Kiểm Thử (Testing)
+Dự án tích hợp kiểm thử tự động để đảm bảo tính ổn định:
+- Chạy toàn bộ tests: `npm test`
+- Chạy test tích hợp cho Auth: `npx jest tests/auth.integration.test.js`
+
+Chúc team phát triển tính năng thuận lợi! 🚀
