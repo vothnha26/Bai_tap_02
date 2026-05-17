@@ -1,79 +1,66 @@
-const prisma = require('../config/prisma');
+const User = require('../models/User');
 
 class UserRepository {
   async findByEmail(email) {
-    return await prisma.user.findUnique({
-      where: { email },
-      include: { accounts: true }
-    });
+    return await User.findOne({ email });
   }
 
   async findById(id) {
-    return await prisma.user.findUnique({
-      where: { id },
-      include: { accounts: true }
-    });
+    return await User.findById(id);
   }
 
   async createUser(userData, accountData) {
-    return await prisma.user.create({
-      data: {
-        ...userData,
-        accounts: {
-          create: accountData
-        }
-      }
+    const user = new User({
+      ...userData,
+      accounts: accountData
     });
+    return await user.save();
   }
 
   async updateStatus(email, status, verifiedAt) {
-    return await prisma.user.update({
-      where: { email },
-      data: { status, verifiedAt }
-    });
+    return await User.findOneAndUpdate(
+      { email },
+      { status, verifiedAt },
+      { new: true }
+    );
   }
 
   async updateLocalPassword(email, passwordHash) {
-    return await prisma.userAccount.updateMany({
-      where: {
-        provider: 'LOCAL',
-        user: { email }
+    return await User.findOneAndUpdate(
+      { 
+        email, 
+        'accounts.provider': 'LOCAL' 
       },
-      data: { passwordHash }
-    });
+      { 
+        $set: { 'accounts.$.passwordHash': passwordHash } 
+      },
+      { new: true }
+    );
   }
 
   /**
    * Get user with password hash for login
    */
   async findByEmailWithPassword(email) {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { 
-        accounts: true
-      }
-    });
+    const user = await User.findOne({ email });
 
     if (user && user.accounts && user.accounts.length > 0) {
-      // Find LOCAL account for password
       const localAccount = user.accounts.find(acc => acc.provider === 'LOCAL');
+      const userObj = user.toJSON();
       return {
-        ...user,
+        ...userObj,
         passwordHash: localAccount?.passwordHash || null
       };
     }
 
-    return user;
+    return user ? user.toJSON() : null;
   }
 
   /**
    * Update user profile (fullName, avatarUrl)
    */
   async updateProfile(userId, profileData) {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: profileData
-    });
+    return await User.findByIdAndUpdate(userId, profileData, { new: true });
   }
 }
 

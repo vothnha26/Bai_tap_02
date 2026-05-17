@@ -1,17 +1,16 @@
 version: '3.8'
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: publicast_mysql
+  mongodb:
+    image: mongo:latest
+    container_name: publicast_mongodb
     ports:
-      - '3307:3306'
+      - '27017:27017'
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: publicast
-      MYSQL_USER: user
-      MYSQL_PASSWORD: user_password
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root_password
+      MONGO_INITDB_DATABASE: publicast
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mongodb_data:/data/db
 
   redis:
     image: redis:alpine
@@ -22,5 +21,5 @@ services:
       - redis_data:/data
 
 volumes:
-  mysql_data:
+  mongodb_data:
   redis_data:

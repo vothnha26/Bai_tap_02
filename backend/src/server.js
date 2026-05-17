@@ -1,17 +1,14 @@
 require('dotenv').config();
 const app = require('./app');
-const prisma = require('./config/prisma');
+const connectDB = require('./config/mongoose');
 const redisClient = require('./config/redis');
 
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
-    // Optional: Test DB connection
-    await prisma.$connect();
-    console.log('Successfully connected to Database');
-
-    // Redis connection is handled in config/redis.js (auto-connect)
+    // Connect to MongoDB
+    await connectDB();
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
@@ -25,7 +22,8 @@ const startServer = async () => {
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
-  await prisma.$disconnect();
+  const mongoose = require('mongoose');
+  await mongoose.connection.close();
   if (redisClient.isOpen) {
     await redisClient.quit();
   }

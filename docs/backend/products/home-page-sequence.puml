@@ -1,0 +1,44 @@
+@startuml
+actor User
+participant "Frontend (App)" as FE
+participant "ProductController" as PC
+participant "ProductService" as PS
+participant "ProductRepository" as PR
+database "MongoDB" as DB
+
+User -> FE: Truy cập Trang chủ
+FE -> PC: GET /api/products/home (Lấy dữ liệu trang chủ)
+activate PC
+
+PC -> PS: getHomePageData()
+activate PS
+
+PS -> PR: getPromotedProducts()
+activate PR
+PR -> DB: find({ isPromoted: true })
+DB --> PR: List Promoted
+PR --> PS: List Promoted
+deactivate PR
+
+PS -> PR: getLatestProducts(limit: 8)
+activate PR
+PR -> DB: find().sort({ createdAt: -1 }).limit(8)
+DB --> PR: List Latest
+PR --> PS: List Latest
+deactivate PR
+
+PS -> PR: getBestSellers(limit: 8)
+activate PR
+PR -> DB: find().sort({ soldCount: -1 }).limit(8)
+DB --> PR: List Best Sellers
+PR --> PS: List Best Sellers
+deactivate PR
+
+PS --> PC: { promoted, latest, bestSellers }
+deactivate PS
+
+PC --> FE: 200 OK (Data JSON)
+deactivate PC
+
+FE --> User: Hiển thị Trang chủ với dữ liệu sản phẩm
+@enduml

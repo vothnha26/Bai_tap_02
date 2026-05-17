@@ -1,0 +1,3 @@
+Xây dựng trang chủ bán hàng 01 loại sản phẩm nào đó có sử dụng Tailwind CSS (https://tailwindcss.com) hoặc các Template tương đương. Khi đăng nhập thành công với vai trò thành viên (đã làm ở các bài tập trước) thì vào trang chủ và hiển thị trang chủ với những thông tin khuyến mãi, mới nhất, bán chạy nhất, thông tin thành viên đăng nhập, logout....
+Xây dựng chức năng trang chi tiết (sản phẩm, tin, bài biết,...) có hình ảnh được swipper nếu nhiều hình cho 01 sản phẩm, báo hàng tồn, số lượng bán được, tăng giảm số lượng, sản phẩm tương tự, hiển thị thuộc danh mục tương ứng nào.
+Xây dựng chức năng tìm kiếm và lọc dữ liệu với nhiều điều kiện lọc.

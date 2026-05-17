@@ -29,16 +29,16 @@ class AuthController {
 
         res.cookie('accessToken', result.accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: false, // Localhost không cần secure
+          sameSite: 'lax', // Dùng lax để trình duyệt gửi cookie khi chuyển origin trong dev
           maxAge: accessTokenMaxAge,
           path: '/'
         });
 
         res.cookie('refreshToken', result.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: false,
+          sameSite: 'lax',
           maxAge: refreshTokenMaxAge,
           path: '/'
         });
@@ -46,7 +46,9 @@ class AuthController {
 
       res.status(200).json({
         message: result.message,
-        user: result.user
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
       });
     } catch (error) {
       const status = error.status || 500;
@@ -65,10 +67,6 @@ class AuthController {
     }
   }
 
-  /**
-   * Request forgot password OTP.
-   * POST /api/auth/forgot-password
-   */
   async forgotPassword(req, res) {
     try {
       const { email } = req.body;
@@ -80,10 +78,6 @@ class AuthController {
     }
   }
 
-  /**
-   * Verify OTP and set a new password.
-   * POST /api/auth/reset-password
-   */
   async resetPassword(req, res) {
     try {
       const { email, otp, newPassword } = req.body;
@@ -99,38 +93,30 @@ class AuthController {
     }
   }
 
-  /**
-   * Login user
-   * POST /api/auth/login
-   */
   async login(req, res) {
     try {
       const { email, password } = req.body;
-
-      // Attempt login
       const result = await authService.login(email.toLowerCase(), password);
 
-      // Reset rate limit on successful login
       if (req.rateLimit) {
         await loginRateLimiter.resetAttempts(req.rateLimit.email, req.rateLimit.ip);
       }
 
-      // Set HttpOnly cookies for tokens
-      const accessTokenMaxAge = 15 * 60 * 1000; // 15 minutes
-      const refreshTokenMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+      const accessTokenMaxAge = 15 * 60 * 1000;
+      const refreshTokenMaxAge = 7 * 24 * 60 * 60 * 1000;
 
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: false, // Localhost không dùng https
+        sameSite: 'lax',
         maxAge: accessTokenMaxAge,
         path: '/'
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: false,
+        sameSite: 'lax',
         maxAge: refreshTokenMaxAge,
         path: '/'
       });
@@ -138,34 +124,26 @@ class AuthController {
       res.status(200).json({
         message: ERROR_MESSAGES.LOGIN_SUCCESS,
         role: result.role,
-        redirectUrl: result.role === 'ADMIN' ? '/admin/profile' : '/user/profile',
-        user: result.user
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
       });
     } catch (error) {
       const status = error.status || 500;
-
-      // Record failed login attempt if rate limiter data is available
       if (req.rateLimit) {
         await loginRateLimiter.recordFailedAttempt(req.rateLimit.email, req.rateLimit.ip);
       }
-
       res.status(status).json({ message: error.message });
     }
   }
 
-  /**
-   * Refresh access token
-   * POST /api/auth/refresh
-   */
   async refreshToken(req, res) {
     try {
       const refreshToken = req.cookies?.refreshToken;
-
       if (!refreshToken) {
         return res.status(401).json({ message: 'Refresh token required' });
       }
 
-      // Extract user ID from refresh token (decode without verification to get ID)
       const jwtUtils = require('../utils/jwt.utils');
       let userId;
       try {
@@ -177,22 +155,21 @@ class AuthController {
 
       const result = await authService.refreshTokens(refreshToken, userId);
 
-      // Set new tokens in cookies
-      const accessTokenMaxAge = 15 * 60 * 1000; // 15 minutes
-      const refreshTokenMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+      const accessTokenMaxAge = 15 * 60 * 1000;
+      const refreshTokenMaxAge = 7 * 24 * 60 * 60 * 1000;
 
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: false,
+        sameSite: 'lax',
         maxAge: accessTokenMaxAge,
         path: '/'
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: false,
+        sameSite: 'lax',
         maxAge: refreshTokenMaxAge,
         path: '/'
       });
@@ -204,24 +181,16 @@ class AuthController {
     }
   }
 
-  /**
-   * Logout user
-   * POST /api/auth/logout
-   */
   async logout(req, res) {
     try {
       const userId = req.user?.id;
-
       if (!userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
       await authService.logout(userId);
-
-      // Clear cookies
       res.clearCookie('accessToken');
       res.clearCookie('refreshToken');
-
       res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
       res.status(500).json({ message: error.message });

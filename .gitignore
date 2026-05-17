@@ -10,6 +10,5 @@ yarn-error.log*
 .vscode/
 
 # Documentation and temporary files
-*.txt
 *.puml
 !docs/**/*.puml

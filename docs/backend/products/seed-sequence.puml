@@ -1,0 +1,39 @@
+@startuml
+actor User
+participant "ProductSeeder (Command/Template)" as Seeder
+participant "DatabaseConfig" as DBConfig
+participant "Mongoose" as Mongoose
+participant "Category Model" as Category
+participant "Product Model" as Product
+
+User -> Seeder : execute npm run seed
+activate Seeder
+
+Seeder -> DBConfig : connectDB()
+activate DBConfig
+DBConfig -> Mongoose : connect(MONGODB_URI)
+Mongoose --> DBConfig : success
+DBConfig --> Seeder : connected
+deactivate DBConfig
+
+Seeder -> Seeder : run() [Template Method]
+
+group clearData()
+    Seeder -> Category : deleteMany({})
+    Category --> Seeder : done
+    Seeder -> Product : deleteMany({})
+    Product --> Seeder : done
+end
+
+group seedData()
+    Seeder -> Category : insertMany(categories)
+    Category --> Seeder : createdCategories
+    Seeder -> Product : insertMany(products)
+    Product --> Seeder : createdProducts
+end
+
+Seeder -> Mongoose : disconnect()
+Seeder --> User : Seeding success (exit 0)
+deactivate Seeder
+
+@enduml
