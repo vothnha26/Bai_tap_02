@@ -47,105 +47,15 @@ class BaseSeeder {
 class ProductSeeder extends BaseSeeder {
   constructor() {
     super();
+    // CHỈ CÓ CÁC DANH MỤC THỰC TẾ
     this.categories = [
-      { name: 'Điện tử', slug: 'electronics', description: 'Thiết bị công nghệ cao' },
-      { name: 'Thời trang', slug: 'clothing', description: 'Quần áo và phụ kiện' },
-      { name: 'Đồ gia dụng', slug: 'home-kitchen', description: 'Tiện nghi cho gia đình' },
-      { name: 'Sách', slug: 'books', description: 'Tri thức cho mọi người' },
-      { name: 'Khuyến mãi', slug: 'khuyen-mai', description: 'Các sản phẩm đang giảm giá hot' },
-      { name: 'Bán chạy', slug: 'ban-chay', description: 'Sản phẩm được yêu thích nhất' }
-    ];
-
-    this.products = [
-      {
-        name: 'iPhone 15 Pro',
-        slug: 'iphone-15-pro',
-        description: 'iPhone mới nhất với khung viền Titanium và chip A17 Pro siêu mạnh mẽ.',
-        price: 28990000,
-        discountPrice: 26500000,
-        images: ['https://images.unsplash.com/photo-1696446701796-da61225697cc?auto=format&fit=crop&q=80&w=800'],
-        stock: 50,
-        soldCount: 120,
-        rating: 4.8,
-        reviews: 45,
-        tags: ['mới', 'khuyến mãi', 'bán chạy'],
-        isPromoted: true,
-        promotionText: 'Flash Sale - Giảm ngay 2.5 triệu',
-        isActive: true
-      },
-      {
-        name: 'MacBook Air M2',
-        slug: 'macbook-air-m2',
-        description: 'Thiết kế mỏng nhẹ đẳng cấp, hiệu năng vượt trội với chip Apple M2.',
-        price: 32990000,
-        discountPrice: 27900000,
-        images: ['https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&q=80&w=800'],
-        stock: 30,
-        soldCount: 85,
-        rating: 4.9,
-        reviews: 32,
-        tags: ['mới', 'khuyến mãi'],
-        isPromoted: true,
-        promotionText: 'Ưu đãi mùa hè - Tặng kèm túi chống sốc',
-        isActive: true
-      },
-      {
-        name: 'Sony WH-1000XM5',
-        slug: 'sony-wh-1000xm5',
-        description: 'Tai nghe chống ồn hàng đầu thế giới với âm thanh chân thực nhất.',
-        price: 8490000,
-        images: ['https://images.unsplash.com/photo-1670057037325-1011689df96c?auto=format&fit=crop&q=80&w=800'],
-        stock: 100,
-        soldCount: 245,
-        rating: 4.7,
-        reviews: 128,
-        tags: ['bán chạy'],
-        isPromoted: false,
-        isActive: true
-      },
-      {
-        name: 'Áo khoác da Bomber',
-        slug: 'leather-jacket',
-        description: 'Chất liệu da cao cấp, kiểu dáng thời thượng cho nam giới.',
-        price: 1500000,
-        images: ['https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=800'],
-        stock: 25,
-        soldCount: 15,
-        rating: 4.5,
-        reviews: 8,
-        tags: ['mới'],
-        isPromoted: false,
-        isActive: true
-      },
-      {
-        name: 'Máy pha Cà phê Espresso',
-        slug: 'coffee-maker',
-        description: 'Tự động pha espresso tại nhà với lớp bọt sữa hoàn hảo.',
-        price: 4500000,
-        discountPrice: 3900000,
-        images: ['https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&q=80&w=800'],
-        stock: 40,
-        soldCount: 60,
-        rating: 4.3,
-        reviews: 24,
-        tags: ['khuyến mãi'],
-        isPromoted: false,
-        isActive: true
-      },
-      {
-        name: 'Smart Watch Series 9',
-        slug: 'smart-watch-s9',
-        description: 'Theo dõi sức khỏe nâng cao và hỗ trợ tập luyện chuyên nghiệp.',
-        price: 10500000,
-        images: ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&q=80&w=800'],
-        stock: 5,
-        soldCount: 500,
-        rating: 4.9,
-        reviews: 312,
-        tags: ['bán chạy', 'mới'],
-        isPromoted: false,
-        isActive: true
-      }
+      { name: 'Điện thoại & Tablet', slug: 'dien-thoai-tablet', description: 'Điện thoại di động, máy tính bảng' },
+      { name: 'Laptop & PC', slug: 'laptop-pc', description: 'Máy tính xách tay và máy tính để bàn' },
+      { name: 'Phụ kiện công nghệ', slug: 'phu-kien-cong-nghe', description: 'Tai nghe, chuột, bàn phím, sạc dự phòng' },
+      { name: 'Thời trang Nam', slug: 'thoi-trang-nam', description: 'Quần áo, giày dép nam' },
+      { name: 'Thời trang Nữ', slug: 'thoi-trang-nu', description: 'Quần áo, váy vóc nữ' },
+      { name: 'Gia dụng & Đời sống', slug: 'gia-dung-doi-song', description: 'Đồ dùng nhà bếp, trang trí nhà cửa' },
+      { name: 'Sách & Văn phòng phẩm', slug: 'sach-van-phong-pham', description: 'Sách giáo khoa, tiểu thuyết, dụng cụ học tập' }
     ];
   }
 
@@ -155,28 +65,106 @@ class ProductSeeder extends BaseSeeder {
     console.log('Cleared existing Category and Product data.');
   }
 
+  generateProducts(createdCategories) {
+    const products = [];
+    const catMap = {};
+    createdCategories.forEach(c => catMap[c.slug] = c._id);
+
+    const images = [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800',
+      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800',
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+      'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800',
+      'https://images.unsplash.com/photo-1583573636246-18cb2246697f?w=800',
+      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800',
+      'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800',
+      'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=800'
+    ];
+
+    const productNames = [
+      'iPhone 15 Pro Max', 'Samsung Galaxy S24 Ultra', 'MacBook Pro M3', 'Dell XPS 13', 
+      'AirPods Pro 2', 'Sony WH-1000XM5', 'Logitech MX Master 3S', 'Razer DeathAdder V3',
+      'Áo thun Cotton Premium', 'Quần Jean Slim Fit', 'Váy lụa sang trọng', 'Áo khoác Blazer',
+      'Bàn phím cơ Custom', 'Màn hình 4K 144Hz', 'Nồi chiên không dầu', 'Máy hút bụi cầm tay',
+      'Sách Đắc Nhân Tâm', 'Tiểu thuyết Nhà Giả Kim', 'Máy ảnh Sony A7IV', 'Lens 35mm f1.4',
+      'Giá đỡ Laptop', 'Chuột không dây Silent', 'Tai nghe Gaming 7.1', 'Sạc dự phòng 20000mAh',
+      'Balo chống nước', 'Đèn bàn thông minh', 'Máy massage cổ', 'Gối công thái học',
+      'Bộ dao nhà bếp', 'Thớt gỗ Teak', 'Bình giữ nhiệt 1L', 'Cốc giữ nhiệt',
+      'Sổ tay bìa da', 'Bút ký cao cấp', 'Kệ sách mini', 'Hộp cơm điện',
+      'Máy xay sinh tố', 'Lò vi sóng 25L', 'Quạt đứng Inverter', 'Bàn là hơi nước',
+      'Dép đi trong nhà', 'Khăn mặt cao cấp', 'Thảm trải sàn', 'Gương để bàn',
+      'Hộp đựng giày', 'Móc treo đa năng', 'Kẹp tóc thủ công', 'Túi tote vải',
+      'Ví da cầm tay', 'Thắt lưng da bò'
+    ];
+
+    for (let i = 0; i < 50; i++) {
+      const name = productNames[i] || `Sản phẩm mẫu số ${i + 1}`;
+      const slug = name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w ]+/g, '').replace(/ +/g, '-') + `-${i + 1}`;
+
+      const basePrice = 200000 + Math.floor(Math.random() * 20000000);
+
+      // Đảm bảo ít nhất 15 sản phẩm đầu tiên có giảm giá để test mục Khuyến mãi
+      const isDiscount = i < 15 || Math.random() > 0.5;
+      const discountPrice = isDiscount ? Math.floor(basePrice * 0.8) : null;
+
+      const rating = (4 + Math.random()).toFixed(1);
+
+      // LOGIC ÉP DATA ĐỂ HIỂN THỊ TOP 10
+      let soldCount, viewCount;
+
+      if (i < 10) {
+        // 10 sản phẩm đầu tiên là TOP BÁN CHẠY
+        soldCount = 800 + (10 - i) * 20; // Giảm dần từ 1000 xuống
+        viewCount = Math.floor(Math.random() * 500);
+      } else if (i >= 10 && i < 20) {
+        // 10 sản phẩm tiếp theo là TOP XEM NHIỀU
+        soldCount = Math.floor(Math.random() * 100);
+        viewCount = 4000 + (20 - i) * 100; // Giảm dần từ 5000 xuống
+      } else {
+        // Các sản phẩm còn lại ngẫu nhiên thấp hơn
+        soldCount = Math.floor(Math.random() * 50);
+        viewCount = Math.floor(Math.random() * 1000);
+      }
+
+      let cats = [];
+      const mainCatIndex = Math.floor(i / (50 / this.categories.length));
+      if (this.categories[mainCatIndex]) {
+        cats.push(catMap[this.categories[mainCatIndex].slug]);
+      }
+
+      products.push({
+        name,
+        slug,
+        description: `Đây là mô tả chi tiết cho sản phẩm ${name}. Sản phẩm chất lượng cao, bảo hành 12 tháng, đổi trả trong 7 ngày nếu có lỗi từ nhà sản xuất.`,
+        price: basePrice,
+        discountPrice,
+        images: [images[i % images.length]],
+        stock: 10 + Math.floor(Math.random() * 100),
+        soldCount,
+        viewCount,
+        rating: parseFloat(rating),
+        reviews: Math.floor(Math.random() * 200),
+        tags: isDiscount ? ['khuyến mãi', 'mới'] : ['mới'],
+        isPromoted: i < 5,
+        promotionText: i < 5 ? 'Giảm giá cực sốc hôm nay' : null,
+        isActive: true,
+        categories: cats
+      });
+    }
+    return products;
+  }
+
   async seedData() {
     const createdCategories = await Category.insertMany(this.categories);
-    console.log(`Seeded ${createdCategories.length} categories.`);
+    console.log(`Seeded ${createdCategories.length} REAL categories.`);
 
-    const productsToSeed = this.products.map((product, index) => {
-      let categoryIds = [];
-      
-      // Phân bổ danh mục
-      if (index < 3) categoryIds.push(createdCategories[0]._id); // Điện tử
-      else if (index === 3) categoryIds.push(createdCategories[1]._id); // Thời trang
-      else if (index === 4) categoryIds.push(createdCategories[2]._id); // Gia dụng
-      else categoryIds.push(createdCategories[0]._id);
-
-      // Thêm danh mục đặc biệt dựa trên tags
-      if (product.tags.includes('khuyến mãi')) categoryIds.push(createdCategories[4]._id);
-      if (product.tags.includes('bán chạy')) categoryIds.push(createdCategories[5]._id);
-
-      return { ...product, categories: categoryIds };
-    });
-
-    const createdProducts = await Product.insertMany(productsToSeed);
-    console.log(`Seeded ${createdProducts.length} products.`);
+    const products = this.generateProducts(createdCategories);
+    const createdProducts = await Product.insertMany(products);
+    console.log(`Seeded ${createdProducts.length} products with stats (soldCount, viewCount).`);
   }
 }
 

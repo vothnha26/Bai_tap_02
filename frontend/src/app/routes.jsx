@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ManageCategories from "./pages/ManageCategories";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
+import Statistics from "./pages/Statistics";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/dashboard",
     Component: AdminDashboard,
+  },
+  {
+    path: "/admin/statistics",
+    Component: Statistics,
   },
   {
     path: "/admin/categories",

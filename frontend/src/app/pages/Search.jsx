@@ -2,22 +2,33 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { productApi, categoryApi } from '../utils/api';
 import { Star, SlidersHorizontal, X, Search as SearchIcon, Loader2, Check } from 'lucide-react';
+import { Slider } from '../components/ui/slider';
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [error, setError] = useState('');
   
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedCategories, setSelectedCategories] = useState(
     searchParams.get('category')?.split(',').filter(Boolean) || []
   );
-  const [priceRange, setPriceRange] = useState({
-    min: searchParams.get('minPrice') || '',
-    max: searchParams.get('maxPrice') || '',
-  });
+  
+  // Giá trị mặc định cho slider (0 - 200 triệu)
+  const MAX_PRICE = 200000000;
+  const [priceValues, setPriceValues] = useState([
+    parseInt(searchParams.get('minPrice')) || 0,
+    parseInt(searchParams.get('maxPrice')) || MAX_PRICE
+  ]);
+
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt');
   const [order, setOrder] = useState(searchParams.get('order') || 'desc');
   const [minRating, setMinRating] = useState(searchParams.get('rating') || '');
@@ -36,11 +47,12 @@ export default function Search() {
     fetchCategories();
   }, []);
 
-  // Fetch products when search params change
+  // Fetch products when search params change (Reset and fetch page 1)
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchInitialProducts = async () => {
       setIsLoading(true);
       setError('');
+      setPage(1);
       try {
         const params = {
           search: searchParams.get('q') || '',
@@ -50,25 +62,81 @@ export default function Search() {
           sortBy: searchParams.get('sortBy') || 'createdAt',
           order: searchParams.get('order') || 'desc',
           rating: searchParams.get('rating') || '',
-          limit: 50
+          page: 1,
+          limit: 12
         };
         const res = await productApi.search(params);
         setProducts(res.data.products);
+        setTotalPages(res.data.pagination.totalPages);
+        setTotalProducts(res.data.pagination.totalProducts);
       } catch (err) {
         setError(err.message || 'Không thể tải danh sách sản phẩm');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchProducts();
+    fetchInitialProducts();
   }, [searchParams]);
+
+  // Fetch more products when page increases
+  useEffect(() => {
+    if (page === 1) return;
+
+    const fetchMoreProducts = async () => {
+      setIsFetchingMore(true);
+      try {
+        const params = {
+          search: searchParams.get('q') || '',
+          category: searchParams.get('category') || '',
+          minPrice: searchParams.get('minPrice') || '',
+          maxPrice: searchParams.get('maxPrice') || '',
+          sortBy: searchParams.get('sortBy') || 'createdAt',
+          order: searchParams.get('order') || 'desc',
+          rating: searchParams.get('rating') || '',
+          page: page,
+          limit: 12
+        };
+        const res = await productApi.search(params);
+        setProducts(prev => [...prev, ...res.data.products]);
+      } catch (err) {
+        console.error('Failed to fetch more products:', err);
+      } finally {
+        setIsFetchingMore(false);
+      }
+    };
+    fetchMoreProducts();
+  }, [page, searchParams]);
+
+  // Infinite Scroll logic using IntersectionObserver
+  useEffect(() => {
+    if (page >= totalPages || isLoading || isFetchingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const target = document.querySelector('#load-more-trigger');
+    if (target) observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [totalPages, page, isLoading, isFetchingMore]);
 
   const handleSearch = () => {
     const params = {};
     if (searchQuery) params.q = searchQuery;
     if (selectedCategories.length > 0) params.category = selectedCategories.join(',');
-    if (priceRange.min) params.minPrice = priceRange.min;
-    if (priceRange.max) params.maxPrice = priceRange.max;
+    
+    // Gửi giá trị từ slider
+    if (priceValues[0] > 0) params.minPrice = priceValues[0];
+    if (priceValues[1] < MAX_PRICE) params.maxPrice = priceValues[1];
+    
     if (sortBy !== 'createdAt') params.sortBy = sortBy;
     if (order !== 'desc') params.order = order;
     if (minRating) params.rating = minRating;
@@ -79,7 +147,7 @@ export default function Search() {
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategories([]);
-    setPriceRange({ min: '', max: '' });
+    setPriceValues([0, MAX_PRICE]);
     setSortBy('createdAt');
     setOrder('desc');
     setMinRating('');
@@ -127,11 +195,18 @@ export default function Search() {
     setSearchParams({ ...currentParams, sortBy: newSort, order: newOrder });
   };
 
+  const formatCurrency = (value) => {
+    if (value >= 1000000) {
+      return (value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1) + 'tr';
+    }
+    return value.toLocaleString('vi-VN') + 'đ';
+  };
+
   const hasActiveFilters =
     searchQuery ||
     selectedCategories.length > 0 ||
-    priceRange.min ||
-    priceRange.max ||
+    priceValues[0] > 0 ||
+    priceValues[1] < MAX_PRICE ||
     minRating ||
     sortBy !== 'createdAt';
 
@@ -186,7 +261,7 @@ export default function Search() {
                 )}
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
                     Danh mục
@@ -221,34 +296,27 @@ export default function Search() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
-                    Khoảng giá
-                  </label>
-                  <div className="space-y-2">
-                    {[
-                      { label: 'Tất cả giá', min: '', max: '' },
-                      { label: 'Dưới 1 triệu', min: '0', max: '1000000' },
-                      { label: '1 - 5 triệu', min: '1000000', max: '5000000' },
-                      { label: '5 - 10 triệu', min: '5000000', max: '10000000' },
-                      { label: '10 - 20 triệu', min: '10000000', max: '20000000' },
-                      { label: 'Trên 20 triệu', min: '20000000', max: '' },
-                    ].map((range, idx) => {
-                      const isSelected = priceRange.min === range.min && priceRange.max === range.max;
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setPriceRange({ min: range.min, max: range.max })}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                            isSelected 
-                              ? 'bg-blue-50 text-blue-700 font-bold border-l-4 border-blue-600' 
-                              : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
-                          }`}
-                        >
-                          {range.label}
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+                      Khoảng giá
+                    </label>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                      {formatCurrency(priceValues[0])} - {formatCurrency(priceValues[1])}
+                    </span>
+                  </div>
+                  <div className="px-2 pt-2 pb-6">
+                    <Slider
+                      defaultValue={[0, MAX_PRICE]}
+                      value={priceValues}
+                      max={MAX_PRICE}
+                      step={500000}
+                      onValueChange={setPriceValues}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 font-bold px-1">
+                    <span>0₫</span>
+                    <span>100tr</span>
+                    <span>200tr+</span>
                   </div>
                 </div>
 
@@ -283,7 +351,7 @@ export default function Search() {
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <p className="text-gray-700">
-                  Tìm thấy <span className="font-bold text-blue-600">{products.length}</span> sản phẩm
+                  Tìm thấy <span className="font-bold text-blue-600">{totalProducts}</span> sản phẩm
                 </p>
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-700 font-medium">Sắp xếp:</label>
@@ -327,11 +395,29 @@ export default function Search() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
-                  <ProductCard key={product.id || product._id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {products.map((product) => (
+                    <ProductCard key={product.id || product._id} product={product} />
+                  ))}
+                </div>
+                
+                {/* Trigger for Infinite Scroll */}
+                <div id="load-more-trigger" className="h-10 mt-6 flex items-center justify-center">
+                  {isFetchingMore && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span className="text-sm font-medium">Đang tải thêm...</span>
+                    </div>
+                  )}
+                  {!isFetchingMore && page < totalPages && (
+                    <p className="text-sm text-gray-400">Cuộn xuống để xem thêm</p>
+                  )}
+                  {!isFetchingMore && page >= totalPages && products.length > 0 && (
+                    <p className="text-sm text-gray-500 font-medium">Bạn đã xem hết sản phẩm</p>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -341,9 +427,14 @@ export default function Search() {
 }
 
 function ProductCard({ product }) {
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const discount = product.originalPrice || product.discountPrice
+    ? Math.round(((product.price - (product.discountPrice || product.price)) / product.price) * 100)
     : 0;
+  
+  // Logic hiển thị giá ưu tiên discountPrice
+  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const displayPrice = hasDiscount ? product.discountPrice : product.price;
+  const originalPrice = hasDiscount ? product.price : product.originalPrice;
 
   return (
     <Link
@@ -356,9 +447,9 @@ function ProductCard({ product }) {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
-        {discount > 0 && (
+        {hasDiscount && (
           <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-sm">
-            -{discount}%
+            -{Math.round(((product.price - product.discountPrice) / product.price) * 100)}%
           </div>
         )}
         {product.stock < 10 && (
@@ -381,11 +472,11 @@ function ProductCard({ product }) {
         </div>
         <div className="mt-auto flex items-center gap-2">
           <span className="text-xl font-black text-red-600">
-            {product.price.toLocaleString('vi-VN')}₫
+            {displayPrice.toLocaleString('vi-VN')}₫
           </span>
-          {product.originalPrice && (
+          {originalPrice && originalPrice > displayPrice && (
             <span className="text-sm text-gray-400 line-through">
-              {product.originalPrice.toLocaleString('vi-VN')}₫
+              {originalPrice.toLocaleString('vi-VN')}₫
             </span>
           )}
         </div>

@@ -2,16 +2,18 @@ const productRepository = require('../repositories/product.repository');
 
 class ProductService {
   async getHomePageData() {
-    const [promoted, latest, bestSellers] = await Promise.all([
+    const [promoted, latest, bestSellers, mostViewed] = await Promise.all([
       productRepository.getPromotedProducts(),
-      productRepository.getLatestProducts(8),
-      productRepository.getBestSellers(8)
+      productRepository.getLatestProducts(10),
+      productRepository.getBestSellers(10),
+      productRepository.getMostViewed(10)
     ]);
 
     return {
       promoted,
       latest,
-      bestSellers
+      bestSellers,
+      mostViewed
     };
   }
 
@@ -20,6 +22,9 @@ class ProductService {
     if (!product) {
       throw new Error('Product not found');
     }
+
+    // Tăng lượt xem bất đồng bộ (không đợi)
+    productRepository.incrementViewCount(slug).catch(err => console.error('View increment error:', err));
 
     const similarProducts = await productRepository.getSimilarProducts(
       product._id,

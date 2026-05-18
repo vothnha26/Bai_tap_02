@@ -1,0 +1,30 @@
+@startuml
+actor User
+participant "ProductPage (UI)" as UI
+participant "API Service" as API
+participant "ProductController" as PC
+participant "ProductService" as PS
+participant "ProductRepository" as PR
+database "MongoDB" as DB
+
+User -> UI : Truy cập trang danh mục / Chọn danh mục
+UI -> API : GET /api/products?category={categoryId}&page={page}&limit={limit}
+API -> PC : searchProducts(req)
+PC -> PS : searchProducts(filters, sort, page, limit)
+PS -> PR : searchAndFilter(filters, sort, skip, limit)
+PR -> DB : Product.find(query).skip(skip).limit(limit)
+DB --> PR : productsData
+PR -> DB : Product.countDocuments(query)
+DB --> PR : totalCount
+PR --> PS : { products, total }
+PS --> PC : { products, total }
+PC --> API : JSON { status: 'success', data: { products, total } }
+API --> UI : Hiển thị sản phẩm ban đầu
+
+User -> UI : Kéo xuống cuối trang (Lazy Loading)
+UI -> API : GET /api/products?category={categoryId}&page={page+1}&limit={limit}
+API -> PC : searchProducts(req)
+... (các bước tương tự) ...
+PC --> UI : JSON { products, total }
+UI -> UI : Append sản phẩm mới vào danh sách hiện tại
+@enduml

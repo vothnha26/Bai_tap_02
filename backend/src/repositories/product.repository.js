@@ -15,11 +15,29 @@ class ProductRepository {
       .limit(limit);
   }
 
-  async getBestSellers(limit = 8) {
+  async getBestSellers(limit = 10) {
     return await Product.find({ isActive: true })
       .sort({ soldCount: -1 })
       .populate('categories', 'name slug')
       .limit(limit);
+  }
+
+  async getMostViewed(limit = 10) {
+    return await Product.find({ isActive: true })
+      .sort({ viewCount: -1 })
+      .populate('categories', 'name slug')
+      .limit(limit);
+  }
+
+  async incrementViewCount(idOrSlug) {
+    const mongoose = require('mongoose');
+    const query = {};
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+      query._id = idOrSlug;
+    } else {
+      query.slug = idOrSlug;
+    }
+    return await Product.findOneAndUpdate(query, { $inc: { viewCount: 1 } }, { new: true });
   }
 
   async findById(id) {
@@ -57,12 +75,37 @@ class ProductRepository {
 
     // Lọc theo nhiều danh mục
     if (filters.category) {
-      const categoryIds = Array.isArray(filters.category) 
+      const categoryInputs = Array.isArray(filters.category) 
         ? filters.category 
         : filters.category.split(',').filter(Boolean);
       
-      if (categoryIds.length > 0) {
-        query.categories = { $in: categoryIds };
+      if (categoryInputs.length > 0) {
+        const mongoose = require('mongoose');
+        const categoryIds = [];
+        
+        for (const input of categoryInputs) {
+          if (mongoose.Types.ObjectId.isValid(input)) {
+            categoryIds.push(input);
+          } else if (input === 'khuyen-mai') {
+            // Xử lý slug ảo: Khuyến mãi (lọc các sp có giá giảm)
+            query.discountPrice = { $ne: null, $lt: '$price' }; // MongoDB logic inside query object
+            // Lưu ý: $lt: '$price' chỉ chạy trong $expr, nên ta dùng cách đơn giản hơn
+            query.discountPrice = { $exists: true, $ne: null };
+          } else if (input === 'ban-chay') {
+            // Xử lý slug ảo: Bán chạy (thay đổi sort mặc định nếu chưa có sort cụ thể)
+            if (!filters.sortBy) {
+              sort = { soldCount: -1 };
+            }
+          } else {
+            // Nếu là slug thực tế trong DB, tìm ID
+            const category = await Category.findOne({ slug: input });
+            if (category) categoryIds.push(category._id);
+          }
+        }
+
+        if (categoryIds.length > 0) {
+          query.categories = { $in: categoryIds };
+        }
       }
     }
 

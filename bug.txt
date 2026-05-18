@@ -1,0 +1,17 @@
+router.get('/', authMiddleware(['ADMIN']), statisticsController.getAdminStats);
+                ^
+
+TypeError: authMiddleware is not a function
+    at Object.<anonymous> (D:\Fullit\tutorials\PubliCast\backend\src\routes\statistics.routes.js:7:17)
+    at Module._compile (node:internal/modules/cjs/loader:1572:14)
+    at Object..js (node:internal/modules/cjs/loader:1709:10)
+    at Module.load (node:internal/modules/cjs/loader:1315:32)
+    at Function._load (node:internal/modules/cjs/loader:1125:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:216:24)
+    at Module.require (node:internal/modules/cjs/loader:1337:12)
+    at require (node:internal/modules/helpers:139:16)
+    at Object.<anonymous> (D:\Fullit\tutorials\PubliCast\backend\src\app.js:7:26)
+
+Node.js v23.1.0
+[nodemon] app crashed - waiting for file changes before starting...

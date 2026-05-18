@@ -58,6 +58,11 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: 0,
   },
+  viewCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   isPromoted: {
     type: Boolean,
     default: false,

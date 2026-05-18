@@ -1,0 +1,21 @@
+@startuml Statistics Flow
+
+actor Admin
+participant "AdminDashboard (UI)" as UI
+participant "StatisticsController" as Controller
+participant "StatisticsService" as Service
+participant "StatisticsRepository" as Repository
+database "MongoDB" as DB
+
+Admin -> UI: Click "Thống kê" tab
+UI -> Controller: GET /api/statistics/top-sales
+Controller -> Service: getTopSellingProducts(limit)
+Service -> Repository: getTopProductsBySoldCount(limit)
+Repository -> DB: Product.find().sort({soldCount: -1}).limit(limit)
+DB --> Repository: Result (List of products)
+Repository --> Service: List of products
+Service --> Controller: Formatted stats data
+Controller --> UI: JSON Response {status: 'success', data: [...]}
+UI --> Admin: Display Statistics Table/Charts
+
+@enduml

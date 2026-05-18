@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { productApi } from '../utils/api';
-import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export default function AdminDashboard() {
@@ -9,12 +9,24 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const LIMIT = 10;
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (pageNum = 1) => {
     setIsLoading(true);
     try {
-      const response = await productApi.search({ limit: 100 });
+      const response = await productApi.search({ 
+        page: pageNum, 
+        limit: LIMIT 
+      });
       setProducts(response.data.products);
+      setTotalPages(response.data.pagination.totalPages);
+      setTotalProducts(response.data.pagination.totalProducts);
+      setPage(response.data.pagination.currentPage);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -29,8 +41,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    fetchProducts();
-  }, [navigate]);
+    fetchProducts(page);
+  }, [navigate, page]);
 
   const handleDelete = async (id) => {
     if (confirm('Bạn có chắc muốn xóa sản phẩm này? Thao tác này không thể hoàn tác.')) {
@@ -38,7 +50,7 @@ export default function AdminDashboard() {
       try {
         await productApi.delete(id);
         alert('Đã xóa sản phẩm thành công!');
-        fetchProducts(); // Tải lại danh sách
+        fetchProducts(page);
       } catch (error) {
         alert('Lỗi: ' + error.message);
       } finally {
@@ -52,10 +64,37 @@ export default function AdminDashboard() {
     navigate('/login');
   };
 
+  const renderPagination = () => {
+    const pages = [];
+    let startPage = Math.max(1, page - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => setPage(i)}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition ${
+            page === i 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-white text-gray-700 border hover:bg-gray-50'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+    return pages;
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
+      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed h-full">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-blue-400">ShopVN Admin</h1>
         </div>
@@ -66,6 +105,13 @@ export default function AdminDashboard() {
           >
             <Package className="w-5 h-5" />
             <span>Sản phẩm</span>
+          </button>
+          <button 
+            onClick={() => navigate('/admin/statistics')}
+            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
+          >
+            <TrendingUp className="w-5 h-5" />
+            <span>Thống kê</span>
           </button>
           <button 
             onClick={() => navigate('/admin/categories')}
@@ -87,7 +133,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Quản lý sản phẩm</h2>
@@ -214,6 +260,35 @@ export default function AdminDashboard() {
               )}
             </tbody>
           </table>
+
+          {/* Pagination Controls */}
+          {!isLoading && totalPages > 1 && (
+            <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
+              <p className="text-sm text-gray-600 font-medium">
+                Hiển thị trang <span className="text-blue-600">{page}</span> trên tổng số <span className="text-blue-600">{totalPages}</span> trang
+                ({totalProducts} sản phẩm)
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 bg-white border rounded-md text-sm font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                >
+                  Trước
+                </button>
+                <div className="flex items-center gap-1">
+                  {renderPagination()}
+                </div>
+                <button
+                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 bg-white border rounded-md text-sm font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

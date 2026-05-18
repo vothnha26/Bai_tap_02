@@ -61,3 +61,7 @@ export const categoryApi = {
   update: (id, data) => apiFetch(`/categories/${id}`, { method: 'PUT', body: data }),
   delete: (id) => apiFetch(`/categories/${id}`, { method: 'DELETE' }),
 };
+
+export const statisticsApi = {
+  getAdminStats: () => apiFetch('/statistics'),
+};

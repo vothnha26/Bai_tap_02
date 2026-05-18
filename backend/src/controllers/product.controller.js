@@ -53,16 +53,27 @@ class ProductController {
         sort.createdAt = -1;
       }
 
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 20;
+
       const data = await productService.searchProducts(
         filters,
         sort,
-        parseInt(page) || 1,
-        parseInt(limit) || 20
+        pageNum,
+        limitNum
       );
 
       res.json({
         status: 'success',
-        data
+        data: {
+          products: data.products,
+          pagination: {
+            totalProducts: data.total,
+            totalPages: Math.ceil(data.total / limitNum),
+            currentPage: pageNum,
+            limit: limitNum
+          }
+        }
       });
     } catch (error) {
       res.status(500).json({

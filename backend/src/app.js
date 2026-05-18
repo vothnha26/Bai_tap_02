@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
 const productRoutes = require('./routes/product.routes');
 const categoryRoutes = require('./routes/category.routes');
+const statisticsRoutes = require('./routes/statistics.routes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
