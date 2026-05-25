@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { categoryApi } from '../../services/category.service';
-import { Plus, LayoutDashboard, LogOut, Package, Trash2, Edit2, Loader2, X, Save } from 'lucide-react';
+import { Plus, LayoutDashboard, LogOut, Package, Trash2, Edit2, Loader2, X, Save, ShoppingBag, TrendingUp } from 'lucide-react';
 
 export default function ManageCategories() {
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ export default function ManageCategories() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
+      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed h-full">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-blue-400">ShopVN Admin</h1>
         </div>
@@ -79,10 +79,18 @@ export default function ManageCategories() {
             <Package className="w-5 h-5" />
             <span>Sản phẩm</span>
           </button>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg">
+          <button onClick={() => navigate('/admin/orders')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
+            <ShoppingBag className="w-5 h-5" />
+            <span>Đơn hàng</span>
+          </button>
+          <button onClick={() => navigate('/admin/statistics')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
+            <TrendingUp className="w-5 h-5" />
+            <span>Thống kê</span>
+          </button>
+          <button onClick={() => navigate('/admin/categories')} className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg w-full text-left">
             <LayoutDashboard className="w-5 h-5" />
             <span>Danh mục</span>
-          </a>
+          </button>
         </nav>
         <div className="p-4 border-t border-gray-800">
           <button onClick={() => { localStorage.clear(); navigate('/login'); }} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
@@ -92,7 +100,7 @@ export default function ManageCategories() {
         </div>
       </aside>
 
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Quản lý danh mục</h2>

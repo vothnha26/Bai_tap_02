@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { productApi } from '../../services/product.service';
-import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp } from 'lucide-react';
+import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp, ShoppingBag } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 
 export default function AdminDashboard() {
@@ -105,6 +105,13 @@ export default function AdminDashboard() {
           >
             <Package className="w-5 h-5" />
             <span>Sản phẩm</span>
+          </button>
+          <button 
+            onClick={() => navigate('/admin/orders')}
+            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            <span>Đơn hàng</span>
           </button>
           <button 
             onClick={() => navigate('/admin/statistics')}

@@ -5,6 +5,9 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const REFRESH_TOKEN_REDIS_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
 
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev_access_secret_key';
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_key';
+
 class JWTUtils {
   /**
    * Generate Access Token
@@ -12,7 +15,7 @@ class JWTUtils {
    * @returns {string} JWT token
    */
   generateAccessToken(payload) {
-    return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+    return jwt.sign(payload, ACCESS_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY
     });
   }
@@ -23,7 +26,7 @@ class JWTUtils {
    * @returns {string} JWT token
    */
   generateRefreshToken(payload) {
-    return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+    return jwt.sign(payload, REFRESH_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRY
     });
   }
@@ -44,7 +47,7 @@ class JWTUtils {
    */
   verifyAccessToken(token) {
     try {
-      return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+      return jwt.verify(token, ACCESS_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         throw new Error('Access token expired');
@@ -60,7 +63,7 @@ class JWTUtils {
    */
   verifyRefreshToken(token) {
     try {
-      return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+      return jwt.verify(token, REFRESH_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         throw new Error('Refresh token expired');

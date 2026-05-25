@@ -67,6 +67,13 @@ export default function Statistics() {
             <span>Sản phẩm</span>
           </button>
           <button 
+            onClick={() => navigate('/admin/orders')}
+            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            <span>Đơn hàng</span>
+          </button>
+          <button 
             onClick={() => navigate('/admin/statistics')}
             className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg w-full text-left"
           >

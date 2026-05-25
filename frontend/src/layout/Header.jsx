@@ -2,9 +2,11 @@ import { Link, useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, LogOut, Menu, X, Settings } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { useCart } from '../context/CartContext';
 
 export default function Header() {
   const navigate = useNavigate();
+  const { itemCount } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -39,6 +41,11 @@ export default function Header() {
               <Link to="/search" className="text-gray-700 hover:text-blue-600 transition font-medium">
                 Sản phẩm
               </Link>
+              {user && (
+                <Link to="/orders" className="text-gray-700 hover:text-blue-600 transition font-medium">
+                  Đơn hàng
+                </Link>
+              )}
               {user?.role === 'ADMIN' && (
                 <Link 
                   to="/admin/dashboard" 
@@ -60,12 +67,17 @@ export default function Header() {
               <span>Tìm kiếm</span>
             </Link>
 
-            <button className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+            <Link
+              to="/cart"
+              className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+            >
               <ShoppingCart className="w-6 h-6" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                0
-              </span>
-            </button>
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </Link>
 
             {user ? (
               <div className="hidden md:flex items-center gap-3 pl-4 border-l ml-2">

@@ -4,17 +4,31 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { productApi } from '../services/product.service';
+import { useCart } from '../context/CartContext';
 import { Star, Minus, Plus, ShoppingCart, Heart, Share2, Package, TrendingUp, Loader2, ChevronRight } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const { addToCart } = useCart();
   const sliderRef = useRef(null);
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCart = async () => {
+    setIsAdding(true);
+    const success = await addToCart(product._id || product.id, quantity);
+    if (success) {
+      alert('Đã thêm sản phẩm vào giỏ hàng!');
+    } else {
+      alert('Có lỗi xảy ra, vui lòng thử lại sau.');
+    }
+    setIsAdding(false);
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -258,8 +272,16 @@ export default function ProductDetail() {
                 </div>
 
                 <div className="flex gap-4 mb-8">
-                  <button className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-200 active:scale-95 flex items-center justify-center gap-3">
-                    <ShoppingCart className="w-6 h-6" />
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={isAdding || product.stock <= 0}
+                    className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-200 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {isAdding ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <ShoppingCart className="w-6 h-6" />
+                    )}
                     Thêm vào giỏ hàng
                   </button>
                   <button className="p-4 border-2 border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all active:scale-90">
