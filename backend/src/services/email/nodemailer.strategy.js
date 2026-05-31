@@ -22,6 +22,8 @@ class NodemailerStrategy extends EmailStrategy {
     console.log(`[Email Config] Port: ${port}, Secure: ${isSecure}`);
     console.log(`[Email Config] Mode: ${this.useConsoleEmail ? 'CONSOLE' : 'SMTP'}`);
 
+    this.emailUser = user;
+
     if (this.useConsoleEmail) {
       console.warn('⚠️ Email credentials are not configured or using placeholders. OTP emails will be printed to console.');
       return;
@@ -29,7 +31,6 @@ class NodemailerStrategy extends EmailStrategy {
 
     if (isMissing) {
       console.error('❌ Error: Email credentials (EMAIL_USER/EMAIL_PASS) are missing.');
-      // Fallback to console instead of crashing with "Missing credentials for PLAIN"
       this.useConsoleEmail = true;
       return;
     }
@@ -41,6 +42,15 @@ class NodemailerStrategy extends EmailStrategy {
       auth: {
         user: user,
         pass: pass
+      }
+    });
+
+    // Verify connection configuration
+    this.transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ SMTP Connection Error:', error.message);
+      } else {
+        console.log('✅ SMTP Server is ready to take our messages');
       }
     });
   }
@@ -55,12 +65,17 @@ class NodemailerStrategy extends EmailStrategy {
       return;
     }
 
-    await this.transporter.sendMail({
-      from: '"PubliCast" <noreply@publicast.com>',
-      to,
-      subject,
-      text
-    });
+    try {
+      await this.transporter.sendMail({
+        from: `"PubliCast" <${this.emailUser}>`,
+        to,
+        subject,
+        text
+      });
+    } catch (error) {
+      console.error('❌ Failed to send email via SMTP:', error.message);
+      throw error;
+    }
   }
 }
 

@@ -11,7 +11,9 @@ import {
   Eye, 
   ArrowUpRight,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  Mail,
+  Activity
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 
@@ -167,6 +169,43 @@ export default function Statistics() {
                   <div className="mt-4 flex items-center gap-2 text-blue-600 font-bold text-sm cursor-pointer hover:underline" onClick={() => navigate('/admin/dashboard')}>
                     <span>Quản lý kho hàng ngay</span>
                     <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* System Health Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div className="relative z-10">
+                  <div className="bg-green-600 p-3 rounded-2xl w-fit mb-6 shadow-lg shadow-green-200">
+                    <Activity className="w-6 h-6 text-white" />
+                  </div>
+                  <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Trạng thái hệ thống</p>
+                  <h3 className="text-2xl font-black text-gray-900">Ổn định</h3>
+                  <div className="mt-4 flex items-center gap-2 text-green-600 font-bold text-sm">
+                    <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                    <span>Tất cả các dịch vụ đang hoạt động</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div className="relative z-10">
+                  <div className="bg-blue-600 p-3 rounded-2xl w-fit mb-6 shadow-lg shadow-blue-200">
+                    <Mail className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Hàng đợi Email (Redis)</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-3xl font-black text-gray-900">
+                      {statsData.summary?.emailQueueLen || 0}
+                    </h3>
+                    <span className="text-lg font-medium text-gray-400 italic">jobs đang chờ</span>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 text-gray-400 font-bold text-sm">
+                    <span>Xử lý bởi: Background Worker</span>
                   </div>
                 </div>
               </div>

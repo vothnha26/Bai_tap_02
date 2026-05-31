@@ -7,8 +7,15 @@ const categoryRoutes = require('./routes/category.routes');
 const statisticsRoutes = require('./routes/statistics.routes');
 const cartRoutes = require('./routes/cart.routes');
 const orderRoutes = require('./routes/order.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
+
+// Start Email Worker in the same process for In-Memory Redis support
+if (process.env.NODE_ENV !== 'test') {
+  console.log('[System] Starting integrated Email Worker...');
+  require('./worker');
+}
 
 // Simple Request Logger
 app.use((req, res, next) => {
@@ -32,6 +39,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

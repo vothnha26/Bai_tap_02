@@ -46,9 +46,7 @@ class AuthController {
 
       res.status(200).json({
         message: result.message,
-        user: result.user,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken
+        user: result.user
       });
     } catch (error) {
       const status = error.status || 500;
@@ -124,9 +122,7 @@ class AuthController {
       res.status(200).json({
         message: ERROR_MESSAGES.LOGIN_SUCCESS,
         role: result.role,
-        user: result.user,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken
+        user: result.user
       });
     } catch (error) {
       const status = error.status || 500;
@@ -174,7 +170,9 @@ class AuthController {
         path: '/'
       });
 
-      res.status(200).json({ message: 'Token refreshed successfully' });
+      res.status(200).json({ 
+        message: 'Token refreshed successfully'
+      });
     } catch (error) {
       const status = error.status || 500;
       res.status(status).json({ message: error.message });

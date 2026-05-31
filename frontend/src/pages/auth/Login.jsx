@@ -22,9 +22,7 @@ export default function Login() {
       // Backend dùng HttpOnly cookie cho token, nên chúng ta không cần lưu token thủ công
       // Chỉ lưu thông tin user để hiển thị trên UI
       localStorage.setItem('user', JSON.stringify(response.user));
-      if (response.accessToken) {
-        localStorage.setItem('accessToken', response.accessToken);
-      }
+      
       alert('Đăng nhập thành công!');
       
       if (response.user.role === 'ADMIN') {
@@ -127,9 +125,9 @@ export default function Login() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/forgot-password" title="Quên mật khẩu" className="font-medium text-blue-600 hover:text-blue-500">
                   Quên mật khẩu?
-                </a>
+                </Link>
               </div>
             </div>
 

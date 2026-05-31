@@ -8,32 +8,73 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Interceptor cho Request: Tự động thêm token vào Header
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Biến để tránh gọi refresh nhiều lần cùng lúc
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+  });
+
+  failedQueue = [];
+};
 
 // Interceptor cho Response: Xử lý dữ liệu và lỗi tập trung
 api.interceptors.response.use(
   (response) => {
-    // Axios trả về dữ liệu trong field 'data'
     return response.data;
   },
-  (error) => {
-    // Xử lý lỗi tập trung (ví dụ: log out nếu lỗi 401)
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Nếu lỗi 401 và chưa thử lại lần nào
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // Nếu là request login hoặc verify-otp bị lỗi 401 thì không refresh
+      if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/verify-otp')) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Gọi API refresh token. Backend trả về token mới qua Cookie
+        await axios.post('http://localhost:3000/api/auth/refresh', {}, { withCredentials: true });
+        
+        isRefreshing = false;
+        processQueue(null);
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        isRefreshing = false;
+        processQueue(refreshError);
+
+        // Chuyển hướng về login nếu refresh thất bại
+        window.location.href = '/login';
+        
+        return Promise.reject(refreshError);
+      }
+    }
+
     const message = error.response?.data?.message || error.message || 'Có lỗi xảy ra';
-    console.error('API Error:', message);
-    
-    // Ném lỗi tiếp để component xử lý nếu cần
     return Promise.reject(new Error(message));
   }
 );

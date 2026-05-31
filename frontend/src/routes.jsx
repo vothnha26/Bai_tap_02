@@ -8,9 +8,12 @@ import Orders from "./pages/Orders";
 import ProductDetail from "./pages/ProductDetail";
 import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import VerifyOTP from "./pages/auth/VerifyOTP";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageOrders from "./pages/admin/ManageOrders";
 import ManageCategories from "./pages/admin/ManageCategories";
@@ -30,6 +33,14 @@ export const router = createBrowserRouter([
   {
     path: "/verify-otp",
     Component: VerifyOTP,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPassword,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPassword,
   },
   {
     path: "/admin",
@@ -54,6 +65,7 @@ export const router = createBrowserRouter([
       { path: "order-success/:orderId", Component: OrderSuccess },
       { path: "product/:id", Component: ProductDetail },
       { path: "search", Component: Search },
+      { path: "profile", Component: Profile },
       { path: "*", Component: NotFound },
     ],
   },

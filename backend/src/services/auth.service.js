@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/user.repository');
 const otpService = require('./otp.service');
-const emailService = require('./email.service');
+const emailQueue = require('./email.queue');
 const jwtUtils = require('../utils/jwt.utils');
 const redisClient = require('../config/redis');
 
@@ -32,7 +32,7 @@ class AuthService {
 
     const otp = await otpService.generateOTP();
     await otpService.saveOTP(normalizedEmail, otp);
-    await emailService.sendOTP(normalizedEmail, otp);
+    await emailQueue.push('otp', { email: normalizedEmail, otp });
 
     return user;
   }
@@ -114,7 +114,7 @@ class AuthService {
 
     const otp = await otpService.generateOTP();
     await otpService.saveOTP(normalizedEmail, otp);
-    await emailService.sendOTP(normalizedEmail, otp);
+    await emailQueue.push('otp', { email: normalizedEmail, otp });
 
     // Set throttle key for 60 seconds
     await redisClient.setEx(throttleKey, 60, '1');
@@ -275,7 +275,7 @@ class AuthService {
         otp
       );
       await redisClient.del(`${FORGOT_PASSWORD_ATTEMPTS_PREFIX}:${normalizedEmail}`);
-      await emailService.sendForgotPasswordOTP(normalizedEmail, otp);
+      await emailQueue.push('forgot_password', { email: normalizedEmail, otp });
     }
 
     return { message: ERROR_MESSAGES.FORGOT_PASSWORD_OTP_SENT };

@@ -1,10 +1,10 @@
 const rateLimit = require('express-rate-limit');
 
 const forgotPasswordRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 forgot password requests per hour
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 forgot password requests per 15 minutes
   message: {
-    message: 'Too many forgot password requests. Please try again after an hour.'
+    message: 'Bạn đã yêu cầu quên mật khẩu quá nhiều lần. Vui lòng thử lại sau 15 phút.'
   },
   standardHeaders: true,
   legacyHeaders: false,

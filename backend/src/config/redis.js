@@ -65,6 +65,41 @@ const createMemoryRedisClient = () => {
       });
       return deleted;
     },
+    lPush: async (key, value) => {
+      const record = getRecord(key) || { value: [] };
+      const list = Array.isArray(record.value) ? record.value : [];
+      list.unshift(String(value));
+      store.set(key, { value: list, expiresAt: null });
+      return list.length;
+    },
+    brPop: async (key, timeout) => {
+      // Basic simulation of brPop for memory store
+      const poll = () => {
+        const record = getRecord(key);
+        if (record && Array.isArray(record.value) && record.value.length > 0) {
+          const value = record.value.pop();
+          store.set(key, { value: record.value, expiresAt: null });
+          return { key, element: value };
+        }
+        return null;
+      };
+
+      const start = Date.now();
+      while (timeout === 0 || Date.now() - start < timeout * 1000) {
+        const result = poll();
+        if (result) return result;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (timeout !== 0 && Date.now() - start >= timeout * 1000) break;
+      }
+      return null;
+    },
+    lLen: async (key) => {
+      const record = getRecord(key);
+      if (record && Array.isArray(record.value)) {
+        return record.value.length;
+      }
+      return 0;
+    },
     flushDb: async () => {
       store.clear();
       return 'OK';

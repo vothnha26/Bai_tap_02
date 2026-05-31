@@ -5,4 +5,5 @@ export const authApi = {
   register: (userData) => api.post('/auth/register', userData),
   verifyOtp: (otpData) => api.post('/auth/verify-otp', otpData),
   resendOtp: (email) => api.post('/auth/resend-otp', { email }),
+  logout: () => api.post('/auth/logout'),
 };

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, LogOut, Menu, X, Settings } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useCart } from '../context/CartContext';
+import { authApi } from '../services/auth.service';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -17,8 +18,13 @@ export default function Header() {
     }
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('Bạn có chắc muốn đăng xuất?')) {
+      try {
+        await authApi.logout();
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
       localStorage.clear();
       setUser(null);
       navigate('/login');
@@ -81,7 +87,7 @@ export default function Header() {
 
             {user ? (
               <div className="hidden md:flex items-center gap-3 pl-4 border-l ml-2">
-                <div className="flex items-center gap-3">
+                <Link to="/profile" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <div className="w-8 h-8 rounded-full overflow-hidden border bg-gray-100 flex-shrink-0">
                     <ImageWithFallback 
                       src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || user.name)}&background=random`} 
@@ -93,7 +99,7 @@ export default function Header() {
                     <span className="text-sm font-bold text-gray-900 leading-none">{user.fullName || user.name}</span>
                     <span className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">{user.role}</span>
                   </div>
-                </div>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -133,12 +139,12 @@ export default function Header() {
         <div className="md:hidden border-t bg-white animate-in slide-in-from-top duration-200">
           <div className="px-4 py-3 space-y-3">
             {user && (
-              <div className="flex items-center gap-3 pb-3 border-b">
+              <Link to="/profile" className="flex items-center gap-3 pb-3 border-b" onClick={() => setIsMenuOpen(false)}>
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-gray-900">{user.fullName || user.name}</span>
                   <span className="text-xs text-gray-500">{user.email}</span>
                 </div>
-              </div>
+              </Link>
             )}
 
             <Link
