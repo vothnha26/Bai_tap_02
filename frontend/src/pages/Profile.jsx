@@ -5,7 +5,7 @@ import { getProfile, updateProfile } from "../services/user.service";
 import orderService from "../services/order.service";
 import { Button } from "../components/ui/button";
 
-import { ORDER_STATUS } from "../utils/constants";
+import { ORDER_STATUS, USER_ROLES } from "../utils/constants";
 
 const statusConfig = {
   [ORDER_STATUS.PENDING]: { label: 'Đơn hàng mới', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
@@ -109,6 +109,7 @@ const Profile = () => {
     status: "",
     role: "",
   });
+  const isAdmin = profile.role === USER_ROLES.ADMIN;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(false);

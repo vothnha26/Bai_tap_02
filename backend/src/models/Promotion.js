@@ -27,13 +27,15 @@ const promotionSchema = new mongoose.Schema({
   actions: {
     applyDiscountTo: { 
       type: String, 
-      enum: ['ORDER_TOTAL', 'CHEAPEST_ITEM', 'MOST_EXPENSIVE_ITEM', 'SPECIFIC_ITEMS', 'SHIPPING_FEE'],
+      enum: ['ORDER_TOTAL', 'CHEAPEST_ITEM', 'MOST_EXPENSIVE_ITEM', 'SPECIFIC_ITEMS', 'SHIPPING_FEE', 'ADD_ON_ITEMS'],
       default: 'ORDER_TOTAL' 
     },
     discountType: { type: String, enum: ['PERCENTAGE', 'FIXED_AMOUNT'] },
     discountValue: { type: Number, min: 0 },
     maxDiscountAmount: { type: Number, min: 0 },
     maxAppliedItems: { type: Number, default: 1, min: 1 },
+    addOnProductIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    maxAddOnQuantity: { type: Number, default: 1, min: 1 },
 
     giftOptions: {
       selectableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
@@ -157,6 +159,18 @@ function validateTypeSpecificRules(p) {
   
   else if (p.type === 'DISCOUNT') {
     p.actions.giftOptions = undefined;
+
+    if (p.actions.applyDiscountTo === 'ADD_ON_ITEMS') {
+      if (!p.conditions.applicableProductIds || p.conditions.applicableProductIds.length === 0) {
+        throw new Error('Khuyến mãi mua kèm (ADD_ON_ITEMS) yêu cầu phải thiết lập sản phẩm chính (conditions.applicableProductIds).');
+      }
+      if (!p.actions.addOnProductIds || p.actions.addOnProductIds.length === 0) {
+        throw new Error('Khuyến mãi mua kèm (ADD_ON_ITEMS) yêu cầu phải thiết lập sản phẩm phụ mua kèm (actions.addOnProductIds).');
+      }
+    } else {
+      p.actions.addOnProductIds = undefined;
+      p.actions.maxAddOnQuantity = undefined;
+    }
 
     // Giảm giá đơn hàng/sản phẩm bắt buộc phải có giá trị giảm
     if (!p.actions.discountType || p.actions.discountValue === undefined) {

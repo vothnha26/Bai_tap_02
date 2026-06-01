@@ -328,6 +328,41 @@ class PromotionSeeder {
         usageLimit: 1000,
         usedCount: 0,
         isActive: true
+      },
+
+      // Case 9: Mua iPhone kèm phụ kiện giảm 50% (ADDON50)
+      {
+        code: 'ADDON50',
+        name: 'Mua iPhone kèm phụ kiện giảm 50%',
+        type: 'DISCOUNT',
+        conditions: {
+          minOrderAmount: 0,
+          applicableProductIds: [iphone._id],
+          applicableCategoryIds: [],
+          matchType: 'ANY_COMBINATION',
+          minQuantity: 1,
+          userGroup: 'ALL'
+        },
+        actions: {
+          applyDiscountTo: 'ADD_ON_ITEMS',
+          discountType: 'PERCENTAGE',
+          discountValue: 50,
+          addOnProductIds: [airpods._id, mouse._id], // AirPods hoặc Chuột
+          maxAddOnQuantity: 1
+        },
+        schedule: {
+          startDate: new Date(`${startYear}-01-01T00:00:00`),
+          endDate: new Date(`${startYear}-12-31T23:59:59`),
+          daysOfWeek: [],
+          timeSlots: [],
+          specificDates: [],
+          excludeDates: []
+        },
+        priority: 15,
+        isStackable: true,
+        usageLimit: 500,
+        usedCount: 0,
+        isActive: true
       }
     ];
 

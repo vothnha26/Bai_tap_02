@@ -46,9 +46,54 @@ class ProductService {
       priceService.getEffectivePrices(similarProducts)
     ]);
 
+    // Tìm các chương trình khuyến mãi mua kèm áp dụng cho sản phẩm chính này
+    const Promotion = require('../models/Promotion');
+    const now = new Date();
+    const activeAddOnPromotions = await Promotion.find({
+      isActive: true,
+      'schedule.startDate': { $lte: now },
+      'schedule.endDate': { $gte: now },
+      'actions.applyDiscountTo': 'ADD_ON_ITEMS',
+      'conditions.applicableProductIds': product._id
+    }).populate('actions.addOnProductIds');
+
+    // Tính toán giá phụ kiện khi mua kèm
+    const addOnPromotionsWithPrices = await Promise.all(activeAddOnPromotions.map(async (promo) => {
+      const rawAddOnProducts = promo.actions.addOnProductIds || [];
+      const addOnProductsWithBasePrice = await priceService.getEffectivePrices(rawAddOnProducts);
+
+      const addOnProductsWithAddOnPrice = addOnProductsWithBasePrice.map(p => {
+        let addOnPrice = p.effectivePrice;
+        if (promo.actions.discountType === 'PERCENTAGE') {
+          addOnPrice = Math.max(0, p.price * (1 - promo.actions.discountValue / 100));
+        } else if (promo.actions.discountType === 'FIXED_AMOUNT') {
+          addOnPrice = Math.max(0, p.price - promo.actions.discountValue);
+        }
+        
+        // Chuyển mongoose doc sang object và đính kèm addOnPrice, saving
+        const pObj = typeof p.toObject === 'function' ? p.toObject() : p;
+        return {
+          ...pObj,
+          addOnPrice,
+          saving: p.price - addOnPrice
+        };
+      });
+
+      return {
+        _id: promo._id,
+        code: promo.code,
+        name: promo.name,
+        discountType: promo.actions.discountType,
+        discountValue: promo.actions.discountValue,
+        maxAddOnQuantity: promo.actions.maxAddOnQuantity,
+        addOnProducts: addOnProductsWithAddOnPrice
+      };
+    }));
+
     return {
       product: productWithPrice,
-      similarProducts: similarProductsWithPrice
+      similarProducts: similarProductsWithPrice,
+      addOnPromotions: addOnPromotionsWithPrices
     };
   }
 

@@ -104,54 +104,68 @@ class PromotionCalculatorFacade {
       }
     }
 
-    // G. Lọc sản phẩm hợp lệ trong giỏ hàng để kiểm định tiếp
+    // G. Lọc sản phẩm chính hợp lệ trong giỏ hàng để kiểm định tiếp
     const appProdIds = promotion.conditions.applicableProductIds || [];
     const appCatIds = promotion.conditions.applicableCategoryIds || [];
     
-    let applicableItems = items;
+    let primaryItems = items;
     if (appProdIds.length > 0 || appCatIds.length > 0) {
-      applicableItems = items.filter(item => {
+      primaryItems = items.filter(item => {
         const matchProduct = appProdIds.length === 0 || appProdIds.some(id => id.toString() === item.productId.toString());
         const matchCategory = appCatIds.length === 0 || (item.categoryId && appCatIds.some(id => id.toString() === item.categoryId.toString()));
         return matchProduct && matchCategory;
       });
     }
 
-    // Áp dụng luật cộng dồn (Stackable Rules)
-    applicableItems = applicableItems.filter(item => {
-      if (item.hasActiveDiscount) {
-        return item.discountIsStackable && promotion.isStackable;
-      }
-      return true; // Sản phẩm không có giảm giá trực tiếp luôn được áp dụng Voucher
-    });
+    // Áp dụng luật cộng dồn (Stackable Rules) lên sản phẩm chính
+    // Ngoại lệ: Nếu là khuyến mãi mua kèm (ADD_ON_ITEMS), sản phẩm chính chỉ đóng vai trò trigger kích hoạt nên không bị ràng buộc cộng dồn
+    if (promotion.actions.applyDiscountTo !== 'ADD_ON_ITEMS') {
+      primaryItems = primaryItems.filter(item => {
+        if (item.hasActiveDiscount) {
+          return item.discountIsStackable && promotion.isStackable;
+        }
+        return true; // Sản phẩm không có giảm giá trực tiếp luôn được áp dụng Voucher
+      });
+    }
 
-    if (applicableItems.length === 0) {
+    if (primaryItems.length === 0) {
       return { isValid: false, message: 'Đơn hàng không chứa sản phẩm được áp dụng khuyến mãi hoặc sản phẩm đang sale không cho phép cộng dồn.' };
     }
 
-    // H. Kiểm tra tổng số tiền sản phẩm hợp lệ tối thiểu (minOrderAmount)
-    const targetAmount = applicableItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // H. Kiểm tra tổng số tiền sản phẩm chính tối thiểu (minOrderAmount)
+    const targetAmount = primaryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     if (targetAmount < promotion.conditions.minOrderAmount) {
-      return { isValid: false, message: `Tổng giá trị sản phẩm áp dụng phải tối thiểu ${promotion.conditions.minOrderAmount.toLocaleString('vi-VN')}đ.` };
+      return { isValid: false, message: `Tổng giá trị sản phẩm chính phải tối thiểu ${promotion.conditions.minOrderAmount.toLocaleString('vi-VN')}đ.` };
     }
 
-    // I. Kiểm tra số lượng tối thiểu (minQuantity & matchType)
+    // I. Kiểm tra số lượng sản phẩm chính tối thiểu (minQuantity & matchType)
     const minQty = promotion.conditions.minQuantity || 1;
     if (promotion.conditions.matchType === PROMOTION_MATCH_TYPES.ANY_COMBINATION) {
-      const totalQty = applicableItems.reduce((sum, item) => sum + item.quantity, 0);
+      const totalQty = primaryItems.reduce((sum, item) => sum + item.quantity, 0);
       if (totalQty < minQty) {
-        return { isValid: false, message: `Tổng số lượng sản phẩm áp dụng phải tối thiểu ${minQty}.` };
+        return { isValid: false, message: `Tổng số lượng sản phẩm chính phải tối thiểu ${minQty}.` };
       }
     } else if (promotion.conditions.matchType === PROMOTION_MATCH_TYPES.SINGLE_PRODUCT_MIN) {
-      const hasMinQty = applicableItems.some(item => item.quantity >= minQty);
+      const hasMinQty = primaryItems.some(item => item.quantity >= minQty);
       if (!hasMinQty) {
-        return { isValid: false, message: `Phải có ít nhất 1 sản phẩm áp dụng với số lượng tối thiểu là ${minQty}.` };
+        return { isValid: false, message: `Phải có ít nhất 1 sản phẩm chính áp dụng với số lượng tối thiểu là ${minQty}.` };
       }
+    }
+
+    // Xác định danh sách sản phẩm truyền vào Strategy
+    let strategyItems = primaryItems;
+    if (promotion.actions.applyDiscountTo === 'ADD_ON_ITEMS') {
+      const addOnProdIds = promotion.actions.addOnProductIds || [];
+      const addOnItems = items.filter(item =>
+        addOnProdIds.some(id => id.toString() === item.productId.toString())
+      );
+      // Gộp sản phẩm chính và phụ
+      strategyItems = [...primaryItems, ...addOnItems];
     }
 
     // J. Lấy Strategy tương ứng và tính toán giảm giá/quà tặng
     const strategy = PromotionStrategyFactory.getStrategy(promotion.type, promotion.actions.applyDiscountTo);
-    const { discountAmount, giftItems } = await strategy.apply(promotion, applicableItems, shippingFee);
+    const { discountAmount, giftItems } = await strategy.apply(promotion, strategyItems, shippingFee);
 
     // K. Giới hạn discountAmount không vượt quá tổng giá trị đơn hàng
     const totalOrderAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);

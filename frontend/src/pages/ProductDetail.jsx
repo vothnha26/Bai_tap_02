@@ -18,12 +18,24 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState([]);
 
   const handleAddToCart = async () => {
     setIsAdding(true);
     const success = await addToCart(product._id || product.id, quantity);
+    
+    if (success && selectedAddOnIds.length > 0) {
+      for (const addOnId of selectedAddOnIds) {
+        await addToCart(addOnId, 1);
+      }
+    }
+
     if (success) {
-      alert('Đã thêm sản phẩm vào giỏ hàng!');
+      alert(selectedAddOnIds.length > 0 
+        ? 'Đã thêm sản phẩm chính và phụ kiện mua kèm vào giỏ hàng!' 
+        : 'Đã thêm sản phẩm vào giỏ hàng!'
+      );
+      setSelectedAddOnIds([]);
     } else {
       alert('Có lỗi xảy ra, vui lòng thử lại sau.');
     }
@@ -69,7 +81,7 @@ export default function ProductDetail() {
     );
   }
 
-  const { product, similarProducts } = data;
+  const { product, similarProducts, addOnPromotions = [] } = data;
   const categories = product.categories || [];
 
   const sliderSettings = {
@@ -288,6 +300,85 @@ export default function ProductDetail() {
                     <Heart className="w-6 h-6 text-gray-400" />
                   </button>
                 </div>
+
+                {/* Section Mua Kèm Giảm Sâu (Bundle / Add-on) */}
+                {addOnPromotions && addOnPromotions.length > 0 && (
+                  <div className="border-t pt-8 mb-8">
+                    <h3 className="font-bold text-xl mb-4 text-gray-900 flex items-center gap-2">
+                      <span className="text-2xl">🎁</span> Ưu đãi mua kèm giảm sâu
+                    </h3>
+                    <div className="space-y-4">
+                      {addOnPromotions.map((promo) => (
+                        <div key={promo._id} className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-3xl p-6 shadow-sm">
+                          <h4 className="font-bold text-blue-800 text-sm mb-3 flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-xs font-black uppercase">{promo.code}</span>
+                            {promo.name}
+                          </h4>
+                          <div className="space-y-3">
+                            {promo.addOnProducts.map((p) => {
+                              const isChecked = selectedAddOnIds.includes(p._id);
+                              return (
+                                <div 
+                                  key={p._id} 
+                                  className="flex items-center gap-4 p-3 bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 hover:border-blue-200 transition-all duration-300 shadow-sm"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      if (isChecked) {
+                                        setSelectedAddOnIds(prev => prev.filter(id => id !== p._id));
+                                      } else {
+                                        setSelectedAddOnIds(prev => [...prev, p._id]);
+                                      }
+                                    }}
+                                    className="w-5 h-5 rounded-md text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer"
+                                  />
+                                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+                                    <ImageWithFallback
+                                      src={p.images?.[0]}
+                                      alt={p.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-bold text-gray-900 truncate text-sm">{p.name}</h5>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-red-600 font-extrabold text-sm">
+                                        {p.addOnPrice.toLocaleString('vi-VN')}₫
+                                      </span>
+                                      <span className="text-gray-400 line-through text-xs font-medium">
+                                        {p.price.toLocaleString('vi-VN')}₫
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <span className="text-xs bg-red-100 text-red-700 font-bold px-2 py-1 rounded-full">
+                                      Tiết kiệm {p.saving.toLocaleString('vi-VN')}₫
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {selectedAddOnIds.length > 0 && (
+                            <div className="mt-4 text-sm text-gray-600 font-medium flex items-center justify-between">
+                              <span>Đã chọn: <strong className="text-blue-600">{selectedAddOnIds.length}</strong> phụ kiện</span>
+                              <span>
+                                Tổng phụ kiện: <strong className="text-red-600">
+                                  {promo.addOnProducts
+                                    .filter(p => selectedAddOnIds.includes(p._id))
+                                    .reduce((sum, p) => sum + p.addOnPrice, 0)
+                                    .toLocaleString('vi-VN')}₫
+                                </strong>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t pt-8">
                   <h3 className="font-bold text-xl mb-4 flex items-center gap-2">

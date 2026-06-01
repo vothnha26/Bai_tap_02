@@ -5,6 +5,7 @@ const MostExpensiveItemDiscountStrategy = require('./strategies/MostExpensiveIte
 const SpecificItemsDiscountStrategy = require('./strategies/SpecificItemsDiscountStrategy');
 const ShippingFeeDiscountStrategy = require('./strategies/ShippingFeeDiscountStrategy');
 const GiftPromotionStrategy = require('./strategies/GiftPromotionStrategy');
+const AddOnDiscountStrategy = require('./strategies/AddOnDiscountStrategy');
 
 class PromotionStrategyFactory {
   static getStrategy(promotionType, applyDiscountTo) {
@@ -28,6 +29,8 @@ class PromotionStrategyFactory {
           return new SpecificItemsDiscountStrategy();
         case PROMOTION_APPLY_TO.SHIPPING_FEE:
           return new ShippingFeeDiscountStrategy();
+        case PROMOTION_APPLY_TO.ADD_ON_ITEMS:
+          return new AddOnDiscountStrategy();
         default:
           return new OrderTotalDiscountStrategy();
       }
