@@ -10,13 +10,14 @@ class StockValidationHandler extends OrderHandler {
     for (const item of cart.items) {
       const product = await productRepository.findById(item.productId);
       if (!product) {
-        throw new Error(`Product ${item.name} not found`);
-      }
-      if (product.stock < item.quantity) {
-        throw new Error(`Product ${item.name} is out of stock`);
+        throw new Error(`Sản phẩm ${item.name} không tìm thấy`);
       }
 
       const productWithPrice = await priceService.getEffectivePrices(product);
+
+      if (productWithPrice.stock < item.quantity) {
+        throw new Error(`Sản phẩm ${item.name} đã hết hàng hoặc không đủ tồn kho`);
+      }
 
       orderItems.push({
         productId: item.productId,

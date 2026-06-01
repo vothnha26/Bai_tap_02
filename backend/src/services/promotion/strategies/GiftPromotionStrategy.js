@@ -25,7 +25,7 @@ class GiftPromotionStrategy extends BasePromotionStrategy {
             productId: product._id,
             name: product.name,
             quantity: quantity,
-            imageUrl: product.imageUrl
+            imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
           });
         }
       }
@@ -39,7 +39,7 @@ class GiftPromotionStrategy extends BasePromotionStrategy {
             productId: product._id,
             name: product.name,
             quantity: quantity,
-            imageUrl: product.imageUrl
+            imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
           });
         }
       }

@@ -16,6 +16,11 @@ const inventorySchema = new mongoose.Schema({
   warehouseLocation: {
     type: String,
     default: null
+  },
+  lowStockThreshold: {
+    type: Number,
+    default: 10,
+    min: 0
   }
 }, {
   timestamps: true

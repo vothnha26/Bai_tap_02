@@ -9,10 +9,15 @@ class InventoryRepository {
     return await Inventory.find({ productId: { $in: productIds } });
   }
 
-  async updateStock(productId, stock) {
+  async updateStock(productId, stock, lowStockThreshold = undefined, warehouseLocation = undefined) {
+    const updateData = {};
+    if (stock !== undefined && stock !== null) updateData.stock = stock;
+    if (lowStockThreshold !== undefined && lowStockThreshold !== null) updateData.lowStockThreshold = lowStockThreshold;
+    if (warehouseLocation !== undefined && warehouseLocation !== null) updateData.warehouseLocation = warehouseLocation;
+
     return await Inventory.findOneAndUpdate(
       { productId },
-      { stock },
+      updateData,
       { new: true, upsert: true }
     );
   }
@@ -30,6 +35,20 @@ class InventoryRepository {
       await inventory.save();
     }
     return inventory;
+  }
+
+  async decrementStockSafely(productId, amount) {
+    return await Inventory.findOneAndUpdate(
+      { productId, stock: { $gte: amount } },
+      { $inc: { stock: -amount } },
+      { new: true }
+    );
+  }
+
+  async getLowStockItems() {
+    return await Inventory.find({
+      $expr: { $lte: ["$stock", "$lowStockThreshold"] }
+    }).populate('productId');
   }
 }
 

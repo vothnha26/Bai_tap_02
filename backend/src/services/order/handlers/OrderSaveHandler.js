@@ -24,30 +24,60 @@ class OrderSaveHandler extends OrderHandler {
       status: ORDER_STATUS.PENDING
     };
 
-    // 1. Tạo đơn hàng trong DB
-    context.order = await orderRepository.create(orderData);
+    const inventoryService = require('../../../services/inventory/InventoryService');
+    const updatedInventories = [];
 
-    const inventoryRepository = require('../../../repositories/inventory.repository');
-
-    // 2. Trừ tồn kho và cập nhật số lượng đã bán cho sản phẩm chính
-    for (const item of orderItems) {
-      // Trừ tồn kho trong bảng Inventory
-      await inventoryRepository.incrementStock(item.productId, -item.quantity);
-      // Tăng soldCount trong bảng Product
-      await productRepository.update(item.productId, { $inc: { soldCount: item.quantity } });
-    }
-
-    // 3. Trừ tồn kho sản phẩm quà tặng (nếu có)
-    if (giftItems && giftItems.length > 0) {
-      for (const gift of giftItems) {
-        await inventoryRepository.incrementStock(gift.productId, -gift.quantity);
+    try {
+      // 1. Trừ tồn kho sản phẩm chính một cách an toàn qua Facade Service
+      for (const item of orderItems) {
+        const updated = await inventoryService.decrementStockSafely(item.productId, item.quantity, {
+          reason: `Trừ kho mua hàng sản phẩm SKU: ${item.sku || 'N/A'}`,
+          executedBy: 'System'
+        });
+        if (!updated) {
+          throw new Error(`Sản phẩm với ID ${item.productId} đã hết hàng hoặc không đủ tồn kho.`);
+        }
+        updatedInventories.push({ productId: item.productId, quantity: item.quantity });
       }
-    }
 
-    // 4. Tăng lượt sử dụng của Promotion (nếu có)
-    if (promotionInstance) {
-      promotionInstance.usedCount = (promotionInstance.usedCount || 0) + 1;
-      await promotionInstance.save();
+      // 2. Trừ tồn kho sản phẩm quà tặng (nếu có) qua Facade Service
+      if (giftItems && giftItems.length > 0) {
+        for (const gift of giftItems) {
+          const updated = await inventoryService.decrementStockSafely(gift.productId, gift.quantity, {
+            reason: 'Quà tặng khuyến mại (đơn hàng)',
+            executedBy: 'System'
+          });
+          if (!updated) {
+            throw new Error(`Sản phẩm quà tặng với ID ${gift.productId} đã hết hàng hoặc không đủ tồn kho.`);
+          }
+          updatedInventories.push({ productId: gift.productId, quantity: gift.quantity });
+        }
+      }
+
+      // 3. Tạo đơn hàng trong DB sau khi trừ kho thành công
+      context.order = await orderRepository.create(orderData);
+
+      // 4. Cập nhật số lượng đã bán (soldCount) cho sản phẩm chính
+      for (const item of orderItems) {
+        await productRepository.update(item.productId, { $inc: { soldCount: item.quantity } });
+      }
+
+      // 5. Tăng lượt sử dụng của Promotion (nếu có)
+      if (promotionInstance) {
+        promotionInstance.usedCount = (promotionInstance.usedCount || 0) + 1;
+        await promotionInstance.save();
+      }
+
+    } catch (error) {
+      // Rollback: Cộng lại kho cho các sản phẩm đã trừ thành công trước đó qua Facade Service
+      for (const rolled of updatedInventories) {
+        await inventoryService.incrementStock(rolled.productId, rolled.quantity, {
+          type: 'RETURN',
+          reason: 'Hoàn kho do lỗi tạo đơn hàng',
+          executedBy: 'System'
+        });
+      }
+      throw error; // Ném lỗi để ngắt chuỗi Chain of Responsibility (CoR)
     }
 
     return await super.handle(context);

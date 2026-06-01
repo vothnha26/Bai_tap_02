@@ -12,6 +12,11 @@ const productSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
   },
+  sku: {
+    type: String,
+    trim: true,
+    uppercase: true,
+  },
   description: {
     type: String,
     required: true,
@@ -47,6 +52,11 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
   }],
+  /**
+   * @deprecated Trường stock trong Product model đã được chuyển đổi sang Inventory collection.
+   * Để lấy tồn kho thực tế, hãy sử dụng PriceService.getEffectivePrices() hoặc truy vấn trực tiếp từ bảng Inventory.
+   * Tránh đọc hoặc thay đổi trực tiếp trường này trên Product model để ngăn ngừa bất đồng bộ dữ liệu.
+   */
   stock: {
     type: Number,
     required: true,

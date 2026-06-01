@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { productApi } from '../../services/product.service';
 import { categoryApi } from '../../services/category.service';
-import { ArrowLeft, Save, Loader2, Image as ImageIcon, Plus, X, Check } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Image as ImageIcon, Plus, X, Check, Info } from 'lucide-react';
 
 export default function EditProduct() {
   const { id } = useParams();
@@ -207,10 +207,10 @@ export default function EditProduct() {
     setError('');
 
     try {
+      const { stock, ...productRest } = formData;
       const payload = {
-        ...formData,
+        ...productRest,
         price: Number(formData.price),
-        stock: Number(formData.stock),
         images: formData.images.filter(img => img.trim() !== ''),
       };
 
@@ -429,17 +429,6 @@ export default function EditProduct() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Số lượng trong kho *</label>
-                <input
-                  type="number"
-                  name="stock"
-                  required
-                  value={formData.stock}
-                  onChange={handleChange}
-                  className="w-full px-5 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
-                />
-              </div>
             </div>
 
             <div className="space-y-4">

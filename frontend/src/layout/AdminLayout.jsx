@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
-import { Package, LayoutDashboard, LogOut, ShoppingBag, TrendingUp, Percent } from 'lucide-react';
+import { Package, LayoutDashboard, LogOut, ShoppingBag, TrendingUp, Percent, Warehouse } from 'lucide-react';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -53,6 +53,12 @@ export default function AdminLayout() {
       label: 'Khuyến mãi',
       icon: Percent,
       isActive: (pathname) => pathname.startsWith('/admin/promotions')
+    },
+    {
+      path: '/admin/inventory',
+      label: 'Kho hàng',
+      icon: Warehouse,
+      isActive: (pathname) => pathname.startsWith('/admin/inventory')
     }
   ];
 

@@ -21,6 +21,7 @@ import AddProduct from "./pages/admin/AddProduct";
 import EditProduct from "./pages/admin/EditProduct";
 import Statistics from "./pages/admin/Statistics";
 import ManagePromotions from "./pages/admin/ManagePromotions";
+import ManageInventory from "./pages/admin/ManageInventory";
 import AdminLayout from "./layout/AdminLayout";
 
 export const router = createBrowserRouter([
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: "statistics", Component: Statistics },
       { path: "categories", Component: ManageCategories },
       { path: "promotions", Component: ManagePromotions },
+      { path: "inventory", Component: ManageInventory },
       { path: "add-product", Component: AddProduct },
       { path: "edit-product/:id", Component: EditProduct },
     ]

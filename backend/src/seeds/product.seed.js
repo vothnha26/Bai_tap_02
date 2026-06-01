@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const Inventory = require('../models/Inventory');
 const connectDB = require('../config/mongoose');
 const { generateSlug } = require('../utils/utils');
 
@@ -63,7 +64,8 @@ class ProductSeeder extends BaseSeeder {
   async clearData() {
     await Category.deleteMany({});
     await Product.deleteMany({});
-    console.log('Cleared existing Category and Product data.');
+    await Inventory.deleteMany({});
+    console.log('Cleared existing Category, Product and Inventory data.');
   }
 
   generateProducts(createdCategories) {
@@ -135,9 +137,14 @@ class ProductSeeder extends BaseSeeder {
         cats.push(catMap[this.categories[mainCatIndex].slug]);
       }
 
+      const initials = name.split(' ').map(w => w.charAt(0).replace(/[^a-zA-Z0-9]/g, '').toUpperCase()).join('').substring(0, 4);
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const sku = `${initials || 'PROD'}-${rand}`;
+
       products.push({
         name,
         slug,
+        sku,
         description: `Đây là mô tả chi tiết cho sản phẩm ${name}. Sản phẩm chất lượng cao, bảo hành 12 tháng, đổi trả trong 7 ngày nếu có lỗi từ nhà sản xuất.`,
         price: basePrice,
         discountPrice,
@@ -164,6 +171,16 @@ class ProductSeeder extends BaseSeeder {
     const products = this.generateProducts(createdCategories);
     const createdProducts = await Product.insertMany(products);
     console.log(`Seeded ${createdProducts.length} products with stats (soldCount, viewCount).`);
+
+    // Tạo bản ghi Inventory tương ứng cho mỗi sản phẩm mẫu
+    const inventories = createdProducts.map(p => ({
+      productId: p._id,
+      stock: p.stock ?? 10,
+      lowStockThreshold: 10,
+      warehouseLocation: `Khu vực ${String.fromCharCode(65 + Math.floor(Math.random() * 6))}-${Math.floor(Math.random() * 10) + 1}`
+    }));
+    await Inventory.insertMany(inventories);
+    console.log(`Seeded ${inventories.length} inventory records for products.`);
   }
 }
 

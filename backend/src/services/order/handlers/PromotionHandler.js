@@ -2,6 +2,7 @@ const OrderHandler = require('./OrderHandler');
 const Promotion = require('../../../models/Promotion');
 const productRepository = require('../../../repositories/product.repository');
 const promotionCalculatorFacade = require('../../promotion/promotion.facade');
+const priceService = require('../../price.service');
 
 class PromotionHandler extends OrderHandler {
   async handle(context) {
@@ -37,7 +38,11 @@ class PromotionHandler extends OrderHandler {
       if (context.giftItems.length > 0) {
         for (const gift of context.giftItems) {
           const product = await productRepository.findById(gift.productId);
-          if (!product || product.stock < gift.quantity) {
+          if (!product) {
+            throw new Error(`Sản phẩm quà tặng ${gift.name} không tồn tại.`);
+          }
+          const productWithPrice = await priceService.getEffectivePrices(product);
+          if (productWithPrice.stock < gift.quantity) {
             throw new Error(`Sản phẩm quà tặng ${gift.name} đã hết hàng.`);
           }
         }
