@@ -94,11 +94,11 @@ export default function ProductDetail() {
     }
   };
 
-  const discount = product.discountPrice
-    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
+  const hasDiscount = product.hasActiveDiscount === true;
+  const finalPrice = hasDiscount ? product.effectivePrice : product.price;
+  const discount = hasDiscount && product.price
+    ? Math.round(((product.price - product.effectivePrice) / product.price) * 100)
     : 0;
-
-  const finalPrice = product.discountPrice || product.price;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -218,7 +218,7 @@ export default function ProductDetail() {
                     <span className="text-5xl font-black text-red-600">
                       {finalPrice.toLocaleString('vi-VN')}₫
                     </span>
-                    {product.discountPrice && (
+                    {hasDiscount && (
                       <span className="text-2xl text-gray-400 line-through font-medium">
                         {product.price.toLocaleString('vi-VN')}₫
                       </span>
@@ -325,9 +325,9 @@ export default function ProductDetail() {
                       alt={p.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
-                    {p.discountPrice && (
+                    {p.hasActiveDiscount && (
                       <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-black shadow-lg">
-                        -{Math.round(((p.price - p.discountPrice) / p.price) * 100)}%
+                        -{Math.round(((p.price - p.effectivePrice) / p.price) * 100)}%
                       </div>
                     )}
                   </div>
@@ -343,7 +343,7 @@ export default function ProductDetail() {
                     </div>
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-xl font-black text-red-600">
-                        {(p.discountPrice || p.price).toLocaleString('vi-VN')}₫
+                        {p.effectivePrice.toLocaleString('vi-VN')}₫
                       </span>
                     </div>
                   </div>

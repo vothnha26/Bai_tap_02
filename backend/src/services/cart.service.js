@@ -12,7 +12,46 @@ class CartService {
     if (!cartData) {
       return { items: [], totalAmount: 0 };
     }
-    return JSON.parse(cartData);
+    const cart = JSON.parse(cartData);
+
+    if (cart.items && cart.items.length > 0) {
+      const priceService = require('./price.service');
+      const productIds = cart.items.map(item => item.productId);
+      const products = await Promise.all(productIds.map(id => productRepository.findById(id)));
+      
+      const validProducts = products.filter(p => p !== null);
+      const productsWithPrices = await priceService.getEffectivePrices(validProducts);
+      
+      const priceMap = {};
+      productsWithPrices.forEach(p => {
+        priceMap[p.id.toString()] = p;
+      });
+      
+      let cartChanged = false;
+      cart.items = cart.items.map(item => {
+        const dbProduct = priceMap[item.productId];
+        if (dbProduct) {
+          if (item.price !== dbProduct.effectivePrice || 
+              item.hasActiveDiscount !== dbProduct.hasActiveDiscount ||
+              item.discountIsStackable !== dbProduct.discountIsStackable) {
+            item.price = dbProduct.effectivePrice;
+            item.hasActiveDiscount = dbProduct.hasActiveDiscount;
+            item.discountIsStackable = dbProduct.discountIsStackable;
+            cartChanged = true;
+          }
+          return item;
+        }
+        cartChanged = true;
+        return null;
+      }).filter(Boolean);
+      
+      if (cartChanged) {
+        this._calculateTotal(cart);
+        await this._saveCart(userId, cart);
+      }
+    }
+
+    return cart;
   }
 
   async addToCart(userId, productId, quantity) {
@@ -21,18 +60,26 @@ class CartService {
       throw new Error('Product not found');
     }
 
+    const priceService = require('./price.service');
+    const productWithPrice = await priceService.getEffectivePrices(product);
+
     let cart = await this.getCart(userId);
     const existingItemIndex = cart.items.findIndex(item => item.productId === productId);
 
     if (existingItemIndex > -1) {
       cart.items[existingItemIndex].quantity += quantity;
+      cart.items[existingItemIndex].price = productWithPrice.effectivePrice;
+      cart.items[existingItemIndex].hasActiveDiscount = productWithPrice.hasActiveDiscount;
+      cart.items[existingItemIndex].discountIsStackable = productWithPrice.discountIsStackable;
     } else {
       cart.items.push({
         productId: product._id.toString(),
         name: product.name,
-        price: product.price,
+        price: productWithPrice.effectivePrice,
         quantity: quantity,
-        imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
+        imageUrl: product.images && product.images.length > 0 ? product.images[0] : '',
+        hasActiveDiscount: productWithPrice.hasActiveDiscount,
+        discountIsStackable: productWithPrice.discountIsStackable
       });
     }
 

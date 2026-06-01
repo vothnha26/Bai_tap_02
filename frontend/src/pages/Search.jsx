@@ -428,14 +428,12 @@ export default function Search() {
 }
 
 function ProductCard({ product }) {
-  const discount = product.originalPrice || product.discountPrice
-    ? Math.round(((product.price - (product.discountPrice || product.price)) / product.price) * 100)
+  const hasDiscount = product.hasActiveDiscount === true;
+  const displayPrice = hasDiscount ? product.effectivePrice : product.price;
+  const originalPrice = product.price;
+  const discount = hasDiscount && originalPrice
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : 0;
-  
-  // Logic hiển thị giá ưu tiên discountPrice
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-  const displayPrice = hasDiscount ? product.discountPrice : product.price;
-  const originalPrice = hasDiscount ? product.price : product.originalPrice;
 
   return (
     <Link
@@ -450,7 +448,7 @@ function ProductCard({ product }) {
         />
         {hasDiscount && (
           <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold shadow-sm">
-            -{Math.round(((product.price - product.discountPrice) / product.price) * 100)}%
+            -{discount}%
           </div>
         )}
         {product.stock < 10 && (

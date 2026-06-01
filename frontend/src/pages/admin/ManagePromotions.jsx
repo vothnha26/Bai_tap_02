@@ -96,44 +96,7 @@ export default function ManagePromotions() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed h-full shadow-lg">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-blue-400 tracking-wide">ShopVN Admin</h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left font-medium">
-            <Package className="w-5 h-5" />
-            <span>Sản phẩm</span>
-          </button>
-          <button onClick={() => navigate('/admin/orders')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left font-medium">
-            <ShoppingBag className="w-5 h-5" />
-            <span>Đơn hàng</span>
-          </button>
-          <button onClick={() => navigate('/admin/statistics')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left font-medium">
-            <TrendingUp className="w-5 h-5" />
-            <span>Thống kê</span>
-          </button>
-          <button onClick={() => navigate('/admin/categories')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left font-medium">
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Danh mục</span>
-          </button>
-          <button onClick={() => navigate('/admin/promotions')} className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white w-full text-left font-medium shadow-md">
-            <Percent className="w-5 h-5" />
-            <span>Khuyến mãi</span>
-          </button>
-        </nav>
-        <div className="p-4 border-t border-gray-800">
-          <button onClick={() => { localStorage.removeItem('user'); navigate('/login'); }} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left font-medium">
-            <LogOut className="w-5 h-5" />
-            <span>Đăng xuất</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
+    <div className="p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-800">Quản lý khuyến mãi</h2>
@@ -156,7 +119,6 @@ export default function ManagePromotions() {
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
         />
-      </main>
 
       {/* Dialog Form Modal Component */}
       <PromotionFormModal 

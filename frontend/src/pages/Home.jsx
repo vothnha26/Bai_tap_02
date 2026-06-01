@@ -313,13 +313,12 @@ export default function Home() {
 }
 
 function ProductCard({ product, variant = "default", showViews = false }) {
-  const discount = product.originalPrice || product.discountPrice
-    ? Math.round(((product.price - (product.discountPrice || product.price)) / product.price) * 100)
+  const hasDiscount = product.hasActiveDiscount === true;
+  const displayPrice = hasDiscount ? product.effectivePrice : product.price;
+  const originalPrice = product.price;
+  const discount = hasDiscount && originalPrice
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : 0;
-  
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-  const displayPrice = hasDiscount ? product.discountPrice : product.price;
-  const originalPrice = hasDiscount ? product.price : product.originalPrice;
 
   if (variant === "minimal") {
     return (
@@ -369,7 +368,7 @@ function ProductCard({ product, variant = "default", showViews = false }) {
         <div className="absolute top-5 left-5 flex flex-col gap-2">
           {hasDiscount && (
             <div className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-black shadow-lg shadow-red-500/30">
-              -{Math.round(((product.price - product.discountPrice) / product.price) * 100)}%
+              -{discount}%
             </div>
           )}
           {product.isPromoted && (

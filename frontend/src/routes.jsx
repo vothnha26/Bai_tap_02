@@ -21,6 +21,7 @@ import AddProduct from "./pages/admin/AddProduct";
 import EditProduct from "./pages/admin/EditProduct";
 import Statistics from "./pages/admin/Statistics";
 import ManagePromotions from "./pages/admin/ManagePromotions";
+import AdminLayout from "./layout/AdminLayout";
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/admin",
+    Component: AdminLayout,
     children: [
       { index: true, Component: AdminDashboard },
       { path: "dashboard", Component: AdminDashboard },

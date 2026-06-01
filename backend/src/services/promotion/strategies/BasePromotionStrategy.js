@@ -8,16 +8,23 @@ class BasePromotionStrategy {
     const appProdIds = promotion.conditions.applicableProductIds || [];
     const appCatIds = promotion.conditions.applicableCategoryIds || [];
 
-    if (appProdIds.length === 0 && appCatIds.length === 0) {
-      return items; // Không giới hạn sản phẩm/danh mục -> áp dụng cho tất cả
+    let filtered = items;
+    if (appProdIds.length > 0 || appCatIds.length > 0) {
+      filtered = items.filter(item => {
+        const matchProduct = appProdIds.length === 0 || appProdIds.some(id => id.toString() === item.productId.toString());
+        // Hỗ trợ kiểm tra categoryId nếu có đính kèm trong item
+        const matchCategory = appCatIds.length === 0 || (item.categoryId && appCatIds.some(id => id.toString() === item.categoryId.toString()));
+        
+        return matchProduct && matchCategory;
+      });
     }
 
-    return items.filter(item => {
-      const matchProduct = appProdIds.length === 0 || appProdIds.some(id => id.toString() === item.productId.toString());
-      // Hỗ trợ kiểm tra categoryId nếu có đính kèm trong item
-      const matchCategory = appCatIds.length === 0 || (item.categoryId && appCatIds.some(id => id.toString() === item.categoryId.toString()));
-      
-      return matchProduct && matchCategory;
+    // Áp dụng luật cộng dồn (Stackable Rules)
+    return filtered.filter(item => {
+      if (item.hasActiveDiscount) {
+        return item.discountIsStackable && promotion.isStackable;
+      }
+      return true; // Sản phẩm không có giảm giá trực tiếp luôn được áp dụng Voucher
     });
   }
 

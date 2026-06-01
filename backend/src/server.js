@@ -10,6 +10,10 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDB();
     
+    // Run data migration for product discounts
+    const migrateDiscounts = require('./scripts/migrateDiscounts');
+    await migrateDiscounts();
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -56,62 +56,7 @@ export default function Statistics() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed h-full">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-blue-400">ShopVN Admin</h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <button 
-            onClick={() => navigate('/admin/dashboard')}
-            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
-          >
-            <Package className="w-5 h-5" />
-            <span>Sản phẩm</span>
-          </button>
-          <button 
-            onClick={() => navigate('/admin/orders')}
-            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            <span>Đơn hàng</span>
-          </button>
-          <button 
-            onClick={() => navigate('/admin/statistics')}
-            className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg w-full text-left"
-          >
-            <TrendingUp className="w-5 h-5" />
-            <span>Thống kê</span>
-          </button>
-          <button 
-            onClick={() => navigate('/admin/categories')}
-            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Danh mục</span>
-          </button>
-          <button 
-            onClick={() => navigate('/admin/promotions')}
-            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
-          >
-            <Percent className="w-5 h-5" />
-            <span>Khuyến mãi</span>
-          </button>
-        </nav>
-        <div className="p-4 border-t border-gray-800">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Đăng xuất</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
+    <div className="p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Thống kê kinh doanh</h2>
@@ -304,7 +249,6 @@ export default function Statistics() {
              <button onClick={() => window.location.reload()} className="mt-6 text-blue-600 font-black hover:underline">Tải lại trang</button>
           </div>
         )}
-      </main>
     </div>
   );
 }

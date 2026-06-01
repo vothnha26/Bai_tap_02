@@ -1,4 +1,5 @@
 const productRepository = require('../repositories/product.repository');
+const priceService = require('./price.service');
 const { generateSlug } = require('../utils/utils');
 
 class ProductService {
@@ -10,11 +11,18 @@ class ProductService {
       productRepository.getMostViewed(10)
     ]);
 
+    const [promotedWithPrice, latestWithPrice, bestSellersWithPrice, mostViewedWithPrice] = await Promise.all([
+      priceService.getEffectivePrices(promoted),
+      priceService.getEffectivePrices(latest),
+      priceService.getEffectivePrices(bestSellers),
+      priceService.getEffectivePrices(mostViewed)
+    ]);
+
     return {
-      promoted,
-      latest,
-      bestSellers,
-      mostViewed
+      promoted: promotedWithPrice,
+      latest: latestWithPrice,
+      bestSellers: bestSellersWithPrice,
+      mostViewed: mostViewedWithPrice
     };
   }
 
@@ -33,15 +41,22 @@ class ProductService {
       4
     );
 
+    const [productWithPrice, similarProductsWithPrice] = await Promise.all([
+      priceService.getEffectivePrices(product),
+      priceService.getEffectivePrices(similarProducts)
+    ]);
+
     return {
-      product,
-      similarProducts
+      product: productWithPrice,
+      similarProducts: similarProductsWithPrice
     };
   }
 
   async searchProducts(filters, sort, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    return await productRepository.searchAndFilter(filters, sort, skip, limit);
+    const data = await productRepository.searchAndFilter(filters, sort, skip, limit);
+    data.products = await priceService.getEffectivePrices(data.products);
+    return data;
   }
 
   async createProduct(productData) {

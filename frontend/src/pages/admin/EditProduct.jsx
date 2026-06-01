@@ -15,7 +15,6 @@ export default function EditProduct() {
     name: '',
     description: '',
     price: '',
-    discountPrice: '',
     categories: [], 
     stock: '',
     images: [''],
@@ -23,7 +22,74 @@ export default function EditProduct() {
     promotionText: '',
   });
 
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [discountData, setDiscountData] = useState({
+    discountType: 'PERCENTAGE',
+    discountValue: '',
+    startDate: '',
+    endDate: '',
+    isStackable: false,
+  });
+
+  const [salePrice, setSalePrice] = useState('');
+
+  // Đồng bộ từ Mức giảm sang Giá sau giảm dự kiến
+  useEffect(() => {
+    const price = Number(formData.price);
+    const val = Number(discountData.discountValue);
+    if (!price || isNaN(price)) {
+      setSalePrice('');
+      return;
+    }
+    if (!discountData.discountValue && discountData.discountValue !== 0) {
+      setSalePrice('');
+      return;
+    }
+
+    let calculated = price;
+    if (discountData.discountType === 'PERCENTAGE') {
+      calculated = price - (price * val) / 100;
+    } else if (discountData.discountType === 'FIXED_AMOUNT') {
+      calculated = price - val;
+    }
+    setSalePrice(Math.max(0, Math.round(calculated)));
+  }, [formData.price, discountData.discountType, discountData.discountValue]);
+
+  const handleSalePriceChange = (e) => {
+    const value = e.target.value;
+    setSalePrice(value);
+    
+    const price = Number(formData.price);
+    if (!price || isNaN(price) || value === '') {
+      setDiscountData(prev => ({ ...prev, discountValue: '' }));
+      return;
+    }
+
+    const saleVal = Number(value);
+    let calculatedVal = '';
+    if (discountData.discountType === 'PERCENTAGE') {
+      calculatedVal = Math.round(((price - saleVal) / price) * 100);
+      calculatedVal = Math.max(0, Math.min(100, calculatedVal));
+    } else if (discountData.discountType === 'FIXED_AMOUNT') {
+      calculatedVal = price - saleVal;
+      calculatedVal = Math.max(0, calculatedVal);
+    }
+
+    setDiscountData(prev => ({
+      ...prev,
+      discountValue: calculatedVal.toString()
+    }));
+  };
+
   const [allCategories, setAllCategories] = useState([]);
+
+  const formatDateTimeLocal = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+    return localISOTime;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,18 +102,37 @@ export default function EditProduct() {
         setAllCategories(catRes.data);
         
         const product = prodRes.data.product;
-        setProductId(product.id || product._id);
+        const pId = product.id || product._id;
+        setProductId(pId);
+        
         setFormData({
           name: product.name,
           description: product.description,
           price: product.price,
-          discountPrice: product.discountPrice || '',
           categories: (product.categories || []).map(c => c.id || c._id || c),
           stock: product.stock,
           images: product.images.length > 0 ? product.images : [''],
           isPromoted: product.isPromoted || false,
           promotionText: product.promotionText || '',
         });
+
+        // Load discount if exists
+        try {
+          const discRes = await productApi.getDiscount(pId);
+          const discount = discRes.data.data !== undefined ? discRes.data.data : discRes.data;
+          if (discount) {
+            setHasDiscount(true);
+            setDiscountData({
+              discountType: discount.discountType,
+              discountValue: discount.discountValue,
+              startDate: formatDateTimeLocal(discount.startDate),
+              endDate: formatDateTimeLocal(discount.endDate),
+              isStackable: discount.isStackable === true,
+            });
+          }
+        } catch (discErr) {
+          console.error('Failed to load product discount:', discErr);
+        }
       } catch (err) {
         setError('Không thể tải thông tin sản phẩm: ' + err.message);
       } finally {
@@ -60,6 +145,14 @@ export default function EditProduct() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleDiscountChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setDiscountData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
@@ -99,6 +192,17 @@ export default function EditProduct() {
       return;
     }
 
+    if (hasDiscount) {
+      if (!discountData.discountValue || !discountData.startDate || !discountData.endDate) {
+        setError('Vui lòng điền đầy đủ thông tin giảm giá (mức giảm, ngày bắt đầu, ngày kết thúc)');
+        return;
+      }
+      if (new Date(discountData.startDate) >= new Date(discountData.endDate)) {
+        setError('Ngày bắt đầu giảm giá phải nhỏ hơn ngày kết thúc');
+        return;
+      }
+    }
+
     setIsSaving(true);
     setError('');
 
@@ -106,12 +210,23 @@ export default function EditProduct() {
       const payload = {
         ...formData,
         price: Number(formData.price),
-        discountPrice: formData.discountPrice ? Number(formData.discountPrice) : null,
         stock: Number(formData.stock),
         images: formData.images.filter(img => img.trim() !== ''),
       };
 
-      await productApi.update(productId || id, payload);
+      const targetId = productId || id;
+      await productApi.update(targetId, payload);
+
+      if (hasDiscount) {
+        await productApi.upsertDiscount(targetId, {
+          ...discountData,
+          discountValue: Number(discountData.discountValue),
+        });
+      } else {
+        // Xóa discount nếu admin bỏ chọn giảm giá
+        await productApi.deleteDiscount(targetId).catch(err => console.log('No discount to delete or delete failed:', err));
+      }
+
       alert('Cập nhật sản phẩm thành công!');
       navigate('/admin/dashboard');
     } catch (err) {
@@ -193,15 +308,99 @@ export default function EditProduct() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Giá giảm (nếu có)</label>
-                <input
-                  type="number"
-                  name="discountPrice"
-                  value={formData.discountPrice}
-                  onChange={handleChange}
-                  className="w-full px-5 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
-                />
+              <div className="col-span-2 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="hasDiscount"
+                    checked={hasDiscount}
+                    onChange={(e) => setHasDiscount(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 border-gray-300 cursor-pointer"
+                  />
+                  <label htmlFor="hasDiscount" className="text-sm font-bold text-gray-900 cursor-pointer uppercase tracking-wide">
+                    Thiết lập giảm giá trực tiếp (Sale Price) cho sản phẩm này
+                  </label>
+                </div>
+
+                {hasDiscount && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-blue-100 animate-in fade-in duration-200">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Loại giảm giá</label>
+                      <select
+                        name="discountType"
+                        value={discountData.discountType}
+                        onChange={handleDiscountChange}
+                        className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="PERCENTAGE">Theo Phần trăm (%)</option>
+                        <option value="FIXED_AMOUNT">Số tiền cố định (₫)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Mức giảm</label>
+                      <input
+                        type="number"
+                        name="discountValue"
+                        required
+                        value={discountData.discountValue}
+                        onChange={handleDiscountChange}
+                        placeholder={discountData.discountType === 'PERCENTAGE' ? 'Ví dụ: 10 (%)' : 'Ví dụ: 20000 (₫)'}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide text-blue-600">Giá sau giảm mong muốn (₫)</label>
+                      <input
+                        type="number"
+                        name="salePrice"
+                        value={salePrice}
+                        onChange={handleSalePriceChange}
+                        placeholder="Ví dụ: 80000"
+                        className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-blue-50/30 font-semibold"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-1 block">Tự động tính mức giảm tương ứng</span>
+                    </div>
+
+                    <div className="flex items-center pt-6">
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="isStackable"
+                          checked={discountData.isStackable}
+                          onChange={handleDiscountChange}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                        />
+                        Cho phép cộng dồn với Voucher
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Ngày bắt đầu giảm</label>
+                      <input
+                        type="datetime-local"
+                        name="startDate"
+                        required={hasDiscount}
+                        value={discountData.startDate}
+                        onChange={handleDiscountChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Ngày kết thúc giảm</label>
+                      <input
+                        type="datetime-local"
+                        name="endDate"
+                        required={hasDiscount}
+                        value={discountData.endDate}
+                        onChange={handleDiscountChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="col-span-2">

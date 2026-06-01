@@ -1,11 +1,42 @@
 const { PROMOTION_MATCH_TYPES, PROMOTION_USER_GROUPS } = require('../../utils/constants');
 const PromotionStrategyFactory = require('./promotion.factory');
+const priceService = require('../price.service');
+const mongoose = require('mongoose');
 
 class PromotionCalculatorFacade {
   async calculate(promotion, items, userId, shippingFee = 0) {
     // 1. Kiểm tra trạng thái hoạt động
     if (!promotion.isActive) {
       return { isValid: false, message: 'Khuyến mãi đã ngừng hoạt động.' };
+    }
+
+    // Hydrate items from Database to ensure price security and L1 discount properties
+    try {
+      const Product = mongoose.model('Product');
+      const productIds = items.map(item => item.productId);
+      const dbProducts = await Product.find({ _id: { $in: productIds } });
+      const productsWithPricing = await priceService.getEffectivePrices(dbProducts);
+
+      const pricingMap = {};
+      productsWithPricing.forEach(p => {
+        pricingMap[p._id.toString()] = p;
+      });
+
+      items = items.map(item => {
+        const pInfo = pricingMap[item.productId.toString()];
+        return {
+          ...item,
+          price: pInfo ? pInfo.effectivePrice : item.price,
+          originalPrice: pInfo ? pInfo.price : item.price,
+          categoryId: pInfo && pInfo.categories && pInfo.categories.length > 0 
+            ? (pInfo.categories[0]._id || pInfo.categories[0]).toString() 
+            : item.categoryId,
+          hasActiveDiscount: pInfo ? pInfo.hasActiveDiscount : false,
+          discountIsStackable: pInfo ? pInfo.discountIsStackable : false
+        };
+      });
+    } catch (err) {
+      console.error('Error hydrating items in PromotionCalculatorFacade:', err);
     }
 
     const now = new Date();
@@ -86,8 +117,16 @@ class PromotionCalculatorFacade {
       });
     }
 
+    // Áp dụng luật cộng dồn (Stackable Rules)
+    applicableItems = applicableItems.filter(item => {
+      if (item.hasActiveDiscount) {
+        return item.discountIsStackable && promotion.isStackable;
+      }
+      return true; // Sản phẩm không có giảm giá trực tiếp luôn được áp dụng Voucher
+    });
+
     if (applicableItems.length === 0) {
-      return { isValid: false, message: 'Đơn hàng không chứa sản phẩm được áp dụng khuyến mãi.' };
+      return { isValid: false, message: 'Đơn hàng không chứa sản phẩm được áp dụng khuyến mãi hoặc sản phẩm đang sale không cho phép cộng dồn.' };
     }
 
     // H. Kiểm tra tổng số tiền sản phẩm hợp lệ tối thiểu (minOrderAmount)
@@ -112,7 +151,7 @@ class PromotionCalculatorFacade {
 
     // J. Lấy Strategy tương ứng và tính toán giảm giá/quà tặng
     const strategy = PromotionStrategyFactory.getStrategy(promotion.type, promotion.actions.applyDiscountTo);
-    const { discountAmount, giftItems } = await strategy.apply(promotion, items, shippingFee);
+    const { discountAmount, giftItems } = await strategy.apply(promotion, applicableItems, shippingFee);
 
     // K. Giới hạn discountAmount không vượt quá tổng giá trị đơn hàng
     const totalOrderAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
