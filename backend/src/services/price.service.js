@@ -1,4 +1,5 @@
 const productDiscountRepository = require('../repositories/productDiscount.repository');
+const inventoryRepository = require('../repositories/inventory.repository');
 
 class PriceService {
   /**
@@ -18,17 +19,30 @@ class PriceService {
     // Lấy tất cả các discount đang hoạt động của các sản phẩm này
     const activeDiscounts = await productDiscountRepository.findActiveDiscountsForProducts(productIds);
     
+    // Lấy tồn kho của tất cả sản phẩm
+    const inventories = await inventoryRepository.findByProductIds(productIds);
+    
     // Ánh xạ discount theo productId để tìm kiếm nhanh
     const discountMap = {};
     activeDiscounts.forEach(discount => {
       discountMap[discount.productId.toString()] = discount;
     });
 
+    // Ánh xạ tồn kho theo productId
+    const inventoryMap = {};
+    inventories.forEach(inv => {
+      inventoryMap[inv.productId.toString()] = inv.stock;
+    });
+
     const result = productList.map(product => {
       // Chuyển sang plain object để dễ dàng thêm các thuộc tính mới
       const pObj = typeof product.toObject === 'function' ? product.toObject() : { ...product };
       
-      const discount = discountMap[pObj._id ? pObj._id.toString() : pObj.id.toString()];
+      const pIdStr = pObj._id ? pObj._id.toString() : pObj.id.toString();
+      const discount = discountMap[pIdStr];
+      
+      // Override stock từ bảng Inventory
+      pObj.stock = inventoryMap[pIdStr] !== undefined ? inventoryMap[pIdStr] : 0;
       
       if (discount) {
         let discountAmount = 0;

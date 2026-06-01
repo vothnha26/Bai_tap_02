@@ -14,6 +14,10 @@ const startServer = async () => {
     const migrateDiscounts = require('./scripts/migrateDiscounts');
     await migrateDiscounts();
     
+    // Run data migration for inventory
+    const migrateInventory = require('./scripts/migrateInventory');
+    await migrateInventory();
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -1,0 +1,54 @@
+@startuml
+autonumber
+actor Admin
+participant "Product Form (UI)" as UI
+participant "ProductController" as Controller
+participant "ProductService" as Service
+database "Product DB" as DB_Product
+database "ProductDiscount DB" as DB_Discount
+
+== Bi-directional Pricing Calculation on Frontend ==
+Admin -> UI: Input original price (basePrice)
+Admin -> UI: Select discountType (PERCENTAGE / FIXED_AMOUNT)
+
+alt Case A: Admin inputs discountValue (e.g., 10% or 50,000)
+    UI -> UI: calculate salePrice = basePrice - discount
+    UI -> UI: Display calculated "Giá sau giảm mong muốn"
+else Case B: Admin inputs target salePrice directly
+    UI -> UI: calculate discountValue based on target salePrice
+    UI -> UI: Auto-fill discountValue input field
+end
+
+== Save / Update Product Discount ==
+Admin -> UI: Click "Save Product"
+activate UI
+
+UI -> Controller: POST/PUT /api/admin/products (productDetails & discountDetails)
+activate Controller
+
+Controller -> Service: saveProductWithDiscount(productData, discountData)
+activate Service
+
+Service -> DB_Product: Save / Update Product (name, base price, etc.)
+activate DB_Product
+DB_Product --> Service: Return updated product (productId)
+deactivate DB_Product
+
+alt Discount Details provided
+    Service -> DB_Discount: Update / Create ProductDiscount\n(productId, type, value, dates, isStackable)
+    activate DB_Discount
+    DB_Discount --> Service: Return discount record
+    deactivate DB_Discount
+else No Discount details
+    Service -> DB_Discount: Deactivate existing discounts for productId
+end
+
+Service --> Controller: Return saved product status
+deactivate Service
+
+Controller --> UI: Response 200 OK / Success
+deactivate Controller
+
+UI --> Admin: Show success toast notification & redirect
+deactivate UI
+@enduml

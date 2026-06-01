@@ -82,8 +82,9 @@ describe('Order API', () => {
       expect(res.body.status).toBe('PENDING');
 
       // 3. Verify stock was reduced
-      const updatedProduct = await Product.findById(product._id);
-      expect(updatedProduct.stock).toBe(8);
+      const Inventory = require('../models/Inventory');
+      const inventory = await Inventory.findOne({ productId: product._id });
+      expect(inventory.stock).toBe(8);
 
       // 4. Verify cart was cleared
       const cartRes = await request(app)

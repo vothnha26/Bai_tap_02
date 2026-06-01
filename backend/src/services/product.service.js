@@ -60,22 +60,37 @@ class ProductService {
   }
 
   async createProduct(productData) {
+    const { stock, ...productRest } = productData;
     // Tự động tạo slug từ tên nếu chưa có
-    if (!productData.slug) {
-      productData.slug = generateSlug(productData.name);
+    if (!productRest.slug) {
+      productRest.slug = generateSlug(productRest.name);
     }
-    return await productRepository.create(productData);
+    const product = await productRepository.create(productRest);
+    const inventoryRepository = require('../repositories/inventory.repository');
+    await inventoryRepository.updateStock(product._id, stock !== undefined ? stock : 0);
+    return product;
   }
 
   async updateProduct(id, productData) {
-    if (productData.name && !productData.slug) {
-      productData.slug = generateSlug(productData.name);
+    const { stock, ...productRest } = productData;
+    if (productRest.name && !productRest.slug) {
+      productRest.slug = generateSlug(productRest.name);
     }
-    return await productRepository.update(id, productData);
+    const product = await productRepository.update(id, productRest);
+    if (stock !== undefined && product) {
+      const inventoryRepository = require('../repositories/inventory.repository');
+      await inventoryRepository.updateStock(product._id, stock);
+    }
+    return product;
   }
 
   async deleteProduct(id) {
-    return await productRepository.delete(id);
+    const product = await productRepository.delete(id);
+    if (product) {
+      const Inventory = require('../models/Inventory');
+      await Inventory.deleteOne({ productId: product._id });
+    }
+    return product;
   }
 }
 

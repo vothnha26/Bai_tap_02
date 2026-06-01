@@ -90,6 +90,47 @@ productSchema.set('toJSON', {
   }
 });
 
+productSchema.post('save', async function (doc) {
+  try {
+    const Inventory = mongoose.model('Inventory');
+    if (doc.stock !== undefined) {
+      await Inventory.findOneAndUpdate(
+        { productId: doc._id },
+        { stock: doc.stock },
+        { upsert: true, new: true }
+      );
+    }
+  } catch (err) {
+    console.error('Error in Product post-save hook for Inventory:', err);
+  }
+});
+
+productSchema.pre('findOneAndUpdate', async function () {
+  try {
+    const update = this.getUpdate();
+    let stockValue;
+    if (update) {
+      if (update.stock !== undefined) {
+        stockValue = update.stock;
+      } else if (update.$set && update.$set.stock !== undefined) {
+        stockValue = update.$set.stock;
+      }
+    }
+
+    if (stockValue !== undefined) {
+      const query = this.getQuery();
+      const Inventory = mongoose.model('Inventory');
+      await Inventory.findOneAndUpdate(
+        { productId: query._id },
+        { stock: stockValue },
+        { upsert: true, new: true }
+      );
+    }
+  } catch (err) {
+    console.error('Error in Product pre-findOneAndUpdate hook for Inventory:', err);
+  }
+});
+
 const Product = mongoose.model('Product', productSchema);
 
 module.exports = Product;

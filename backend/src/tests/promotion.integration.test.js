@@ -250,8 +250,9 @@ describe('Promotion Integration Testing', () => {
       expect(res.body.giftItems[0].name).toContain('Product B');
 
       // 3. Kiểm tra tồn kho của sản phẩm quà tặng bị trừ
-      const updatedGiftProduct = await Product.findById(productB._id);
-      expect(updatedGiftProduct.stock).toBe(4); // 5 - 1 = 4
+      const Inventory = require('../models/Inventory');
+      const giftInventory = await Inventory.findOne({ productId: productB._id });
+      expect(giftInventory.stock).toBe(4); // 5 - 1 = 4
     });
   });
 });

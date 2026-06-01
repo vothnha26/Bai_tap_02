@@ -1,0 +1,57 @@
+@startuml
+autonumber
+actor Client
+participant "OrderController / CartController" as Controller
+participant "PriceService" as PriceService
+database "ProductDiscount DB" as DB_Discount
+participant "PromotionCalculatorFacade" as Facade
+participant "PromotionService" as PromoService
+database "Promotion DB" as DB_Promo
+
+Client -> Controller: Request Checkout / View Cart (items, voucherCode)
+activate Controller
+
+Controller -> PriceService: calculateEffectivePrices(items)
+activate PriceService
+PriceService -> DB_Discount: Query Active Discounts for products
+activate DB_Discount
+DB_Discount --> PriceService: Return active discounts (type, value, isStackable)
+deactivate DB_Discount
+
+PriceService -> PriceService: Calculate L1 Sale Price (effectivePrice)\nbased on original price & discount
+PriceService --> Controller: Return items with effectivePrice & L1 discount info
+deactivate PriceService
+
+alt Voucher Code Provided
+    Controller -> Facade: applyVoucher(itemsWithEffectivePrice, voucherCode)
+    activate Facade
+    
+    Facade -> PromoService: getActivePromotion(voucherCode)
+    activate PromoService
+    PromoService -> DB_Promo: Query Promotion details
+    activate DB_Promo
+    DB_Promo --> PromoService: Return Promotion rules
+    deactivate DB_Promo
+    PromoService --> Facade: Return Promotion object
+    deactivate PromoService
+    
+    Facade -> Facade: Validate Promotion (expiry, status, minOrder)
+    
+    loop for each item in Cart
+        alt Item has NO active L1 discount OR L1 discount allows stackable (isStackable == true)
+            Facade -> Facade: Apply L2 Voucher discount on L1 effectivePrice
+        else Item has active L1 discount and is NOT stackable
+            Facade -> Facade: Skip L2 Voucher discount (Keep effectivePrice)
+        end
+    end
+    
+    Facade -> Facade: Calculate final totalAmount
+    Facade --> Controller: Return checkoutSummary (totalAmount, discountL2Amount)
+    deactivate Facade
+else No Voucher
+    Controller -> Controller: Sum L1 effectivePrices * quantity
+end
+
+Controller --> Client: Return checkout summary & final price
+deactivate Controller
+@enduml

@@ -28,26 +28,20 @@ class PromotionHandler extends OrderHandler {
       }
 
       context.promotionCode = promotion.code;
+      context.promotionInstance = promotion; // Lưu lại đối tượng để xử lý ở bước OrderSaveHandler
       context.discountAmount = result.discountAmount;
       context.giftItems = result.giftItems || [];
       context.finalAmount = Math.max(0, context.cart.totalAmount - result.discountAmount);
 
-      // 3. Trừ tồn kho các sản phẩm quà tặng (nếu có)
-      if (result.giftItems && result.giftItems.length > 0) {
-        for (const gift of result.giftItems) {
+      // Kiểm tra tồn kho các sản phẩm quà tặng (nếu có) nhưng không trừ kho
+      if (context.giftItems.length > 0) {
+        for (const gift of context.giftItems) {
           const product = await productRepository.findById(gift.productId);
           if (!product || product.stock < gift.quantity) {
             throw new Error(`Sản phẩm quà tặng ${gift.name} đã hết hàng.`);
           }
-          await productRepository.update(gift.productId, {
-            stock: product.stock - gift.quantity
-          });
         }
       }
-
-      // 4. Tăng lượt sử dụng của Promotion
-      promotion.usedCount += 1;
-      await promotion.save();
     }
 
     return await super.handle(context);

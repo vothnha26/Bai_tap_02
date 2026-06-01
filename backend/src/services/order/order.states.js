@@ -19,14 +19,12 @@ class OrderState {
   }
 
   async _returnStock(order) {
+    const inventoryRepository = require('./../../repositories/inventory.repository');
     for (const item of order.items) {
-      const product = await productRepository.findById(item.productId);
-      if (product) {
-        await productRepository.update(item.productId, {
-          stock: product.stock + item.quantity,
-          soldCount: Math.max(0, (product.soldCount || 0) - item.quantity)
-        });
-      }
+      await inventoryRepository.incrementStock(item.productId, item.quantity);
+      await productRepository.update(item.productId, {
+        $inc: { soldCount: -item.quantity }
+      });
     }
   }
 }

@@ -27,12 +27,6 @@ class StockValidationHandler extends OrderHandler {
         hasActiveDiscount: productWithPrice.hasActiveDiscount,
         discountIsStackable: productWithPrice.discountIsStackable
       });
-
-      // Trừ tồn kho chính
-      await productRepository.update(item.productId, {
-        stock: product.stock - item.quantity,
-        soldCount: (product.soldCount || 0) + item.quantity
-      });
     }
 
     context.finalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
