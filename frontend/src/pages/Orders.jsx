@@ -3,6 +3,7 @@ import orderService from '../services/order.service';
 import { Package, Clock, Truck, CheckCircle, XCircle, AlertTriangle, CreditCard, X, ChevronRight, ShoppingBag, Calendar, Hash, MapPin, Phone, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
+import { ORDER_STATUS } from '../utils/constants';
 
 const statusConfig = {
   PENDING: { label: 'Đơn hàng mới', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: Clock },
