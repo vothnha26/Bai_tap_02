@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { categoryApi } from '../../services/category.service';
-import { Plus, LayoutDashboard, LogOut, Package, Trash2, Edit2, Loader2, X, Save, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Plus, LayoutDashboard, LogOut, Package, Trash2, Edit2, Loader2, X, Save, ShoppingBag, TrendingUp, Percent } from 'lucide-react';
 
 export default function ManageCategories() {
   const navigate = useNavigate();
@@ -90,6 +90,10 @@ export default function ManageCategories() {
           <button onClick={() => navigate('/admin/categories')} className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg w-full text-left">
             <LayoutDashboard className="w-5 h-5" />
             <span>Danh mục</span>
+          </button>
+          <button onClick={() => navigate('/admin/promotions')} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
+            <Percent className="w-5 h-5" />
+            <span>Khuyến mãi</span>
           </button>
         </nav>
         <div className="p-4 border-t border-gray-800">
@@ -186,10 +190,6 @@ export default function ManageCategories() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate, Link } from 'react-router';
-import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag } from 'lucide-react';
+import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Gift, Trash } from 'lucide-react';
 import orderService from '../services/order.service';
+import { promotionApi } from '../services/promotion.service';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,8 +16,16 @@ const Checkout = () => {
     shippingAddress: '',
     phone: '',
     note: '',
-    paymentMethod: 'COD'
+    paymentMethod: 'COD',
+    promotionCode: ''
   });
+
+  // Promotion states
+  const [promotionCode, setPromotionCode] = useState('');
+  const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const [applicablePromotions, setApplicablePromotions] = useState([]);
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -33,6 +42,47 @@ const Checkout = () => {
       navigate('/cart');
     }
   }, [cart, cartLoading, navigate]);
+
+  useEffect(() => {
+    if (cart && cart.items && cart.items.length > 0) {
+      fetchApplicablePromotions();
+    }
+  }, [cart]);
+
+  const fetchApplicablePromotions = async () => {
+    try {
+      const res = await promotionApi.getApplicable(cart.items, 0);
+      setApplicablePromotions(res.data);
+    } catch (err) {
+      console.error('Error fetching applicable promotions:', err);
+    }
+  };
+
+  const handleApplyPromotion = async (codeToApply) => {
+    const code = codeToApply || promotionCode;
+    if (!code) return;
+
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const res = await promotionApi.apply(code, cart.items, 0);
+      setAppliedPromotion(res.data);
+      setFormData(prev => ({ ...prev, promotionCode: res.data.code }));
+    } catch (err) {
+      setPromoError(err.response?.data?.message || 'Không thể áp dụng mã khuyến mãi này');
+      setAppliedPromotion(null);
+      setFormData(prev => ({ ...prev, promotionCode: '' }));
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleCancelPromotion = () => {
+    setAppliedPromotion(null);
+    setPromotionCode('');
+    setPromoError('');
+    setFormData(prev => ({ ...prev, promotionCode: '' }));
+  };
 
   if (cartLoading || !cart || !cart.items || cart.items.length === 0) {
     return (
@@ -59,6 +109,9 @@ const Checkout = () => {
       setLoading(false);
     }
   };
+
+  const discountAmount = appliedPromotion ? appliedPromotion.discountAmount : 0;
+  const finalAmount = Math.max(0, cart.totalAmount - discountAmount);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
@@ -210,11 +263,79 @@ const Checkout = () => {
               ))}
             </div>
 
+            {/* Khung áp dụng khuyến mãi */}
+            <div className="border-t border-border pt-6 mb-6">
+              <label className="text-xs font-bold text-foreground uppercase tracking-widest block mb-2 flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-primary" /> Mã giảm giá / Quà tặng
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  disabled={appliedPromotion}
+                  value={promotionCode}
+                  onChange={(e) => setPromotionCode(e.target.value)}
+                  className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-foreground font-mono font-bold focus:ring-2 focus:ring-primary/20 outline-none uppercase text-sm"
+                  placeholder="NHẬP VOUCHER"
+                />
+                {appliedPromotion ? (
+                  <Button type="button" variant="destructive" onClick={handleCancelPromotion} className="rounded-xl px-4 font-bold h-10">Hủy</Button>
+                ) : (
+                  <Button type="button" onClick={() => handleApplyPromotion()} disabled={promoLoading || !promotionCode} className="rounded-xl px-4 font-bold h-10">Áp dụng</Button>
+                )}
+              </div>
+              {promoError && <p className="text-xs text-red-500 font-semibold mt-1">{promoError}</p>}
+              {appliedPromotion && <p className="text-xs text-emerald-600 font-bold mt-1.5">Đã áp dụng: {appliedPromotion.name}</p>}
+
+              {/* Quà tặng đính kèm */}
+              {appliedPromotion && appliedPromotion.giftItems && appliedPromotion.giftItems.length > 0 && (
+                <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-2">
+                  <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1"><Gift className="w-3 h-3" /> Quà tặng đi kèm:</p>
+                  {appliedPromotion.giftItems.map((gift, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <img src={gift.imageUrl} alt={gift.name} className="w-8 h-8 object-cover rounded-lg border shadow-sm" />
+                      <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 truncate flex-1">{gift.name}</div>
+                      <div className="text-[11px] font-bold text-gray-900 dark:text-white">x{gift.quantity}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Danh sách Voucher khả dụng */}
+              {applicablePromotions.length > 0 && !appliedPromotion && (
+                <div className="mt-4">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase mb-2">Voucher khả dụng:</p>
+                  <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                    {applicablePromotions.map((promo) => (
+                      <div 
+                        key={promo._id} 
+                        onClick={() => { setPromotionCode(promo.code); handleApplyPromotion(promo.code); }}
+                        className="p-2 border border-dashed border-border rounded-xl flex items-center justify-between cursor-pointer hover:bg-primary/5 hover:border-primary transition group"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="font-bold text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase">{promo.code}</span>
+                          <p className="text-[10px] text-gray-500 font-semibold mt-1 truncate">{promo.name}</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition whitespace-nowrap ml-2">Áp dụng</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-4 mb-8 pt-6 border-t border-border">
               <div className="flex justify-between text-muted-foreground text-sm font-medium">
                 <span>Tạm tính</span>
                 <span className="text-foreground">{cart.totalAmount.toLocaleString()}đ</span>
               </div>
+              
+              {appliedPromotion && (
+                <div className="flex justify-between text-emerald-600 text-sm font-bold">
+                  <span>Giảm giá</span>
+                  <span>-{discountAmount.toLocaleString()}đ</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-muted-foreground text-sm font-medium">
                 <span>Phí vận chuyển</span>
                 <span className="text-green-600 font-black italic">Miễn phí</span>
@@ -222,7 +343,7 @@ const Checkout = () => {
               <div className="h-px bg-border my-2" />
               <div className="flex justify-between items-end">
                 <span className="text-muted-foreground text-xs font-black uppercase tracking-widest">Tổng cộng</span>
-                <span className="text-3xl font-black text-primary leading-none tracking-tighter">{cart.totalAmount.toLocaleString()}đ</span>
+                <span className="text-3xl font-black text-primary leading-none tracking-tighter">{finalAmount.toLocaleString()}đ</span>
               </div>
             </div>
 

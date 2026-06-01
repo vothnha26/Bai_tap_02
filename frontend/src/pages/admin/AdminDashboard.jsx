@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { productApi } from '../../services/product.service';
-import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp, ShoppingBag } from 'lucide-react';
+import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp, ShoppingBag, Percent } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { useAuth } from '../../context/AuthContext';
 
@@ -127,6 +127,13 @@ export default function AdminDashboard() {
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Danh mục</span>
+          </button>
+          <button 
+            onClick={() => navigate('/admin/promotions')}
+            className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left"
+          >
+            <Percent className="w-5 h-5" />
+            <span>Khuyến mãi</span>
           </button>
         </nav>
         <div className="p-4 border-t border-gray-800">

@@ -22,6 +22,32 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  promotionCode: {
+    type: String,
+    uppercase: true,
+    trim: true,
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+  },
+  shippingDiscountAmount: {
+    type: Number,
+    default: 0,
+  },
+  giftItems: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+    },
+    name: String,
+    quantity: Number,
+    imageUrl: String,
+  }],
+  finalAmount: {
+    type: Number,
+    required: true,
+  },
   shippingAddress: {
     type: String,
     required: true,

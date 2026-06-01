@@ -67,8 +67,10 @@ api.interceptors.response.use(
         isRefreshing = false;
         processQueue(refreshError);
 
-        // Chuyển hướng về login nếu refresh thất bại
-        window.location.href = '/login';
+        // Chuyển hướng về login nếu refresh thất bại và chưa ở trang login
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         
         return Promise.reject(refreshError);
       }

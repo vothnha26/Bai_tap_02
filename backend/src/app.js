@@ -8,6 +8,7 @@ const statisticsRoutes = require('./routes/statistics.routes');
 const cartRoutes = require('./routes/cart.routes');
 const orderRoutes = require('./routes/order.routes');
 const userRoutes = require('./routes/user.routes');
+const promotionRoutes = require('./routes/promotion.routes');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/statistics', statisticsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

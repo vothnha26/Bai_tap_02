@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import cartService from '../services/cart.service';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
@@ -66,10 +67,16 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const { user } = useAuth();
+
   // Initial fetch
   useEffect(() => {
-    fetchCart();
-  }, []);
+    if (user) {
+      fetchCart();
+    } else {
+      setCart({ items: [], totalAmount: 0 });
+    }
+  }, [user]);
 
   const value = {
     cart,
