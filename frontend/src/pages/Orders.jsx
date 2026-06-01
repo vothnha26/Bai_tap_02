@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import orderService from '../services/order.service';
-import { Package, Clock, Truck, CheckCircle, XCircle, AlertTriangle, CreditCard, X, ChevronRight, ShoppingBag, Calendar, Hash, MapPin, Phone, ArrowLeft } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, XCircle, AlertTriangle, CreditCard, X, ChevronRight, ShoppingBag, Calendar, Hash, MapPin, Phone, ArrowLeft, Tag, Percent, Gift } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { ORDER_STATUS } from '../utils/constants';
@@ -95,10 +95,63 @@ const OrderDetailModal = ({ order, onClose }) => {
             </div>
           </div>
 
+          {/* Hiển thị quà tặng trong Modal */}
+          {order.giftItems && order.giftItems.length > 0 && (
+            <div className="space-y-4 mb-10">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Gift className="w-4 h-4 text-emerald-500 animate-bounce" />
+                Quà tặng kèm khuyến mãi
+              </h3>
+              <div className="space-y-4">
+                {order.giftItems.map((gift, idx) => (
+                  <div key={idx} className="flex gap-5 p-5 bg-emerald-50/30 dark:bg-emerald-950/10 rounded-3xl border border-emerald-100/50 items-center">
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden border border-emerald-100 shadow-sm shrink-0">
+                      <img src={gift.imageUrl} alt={gift.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-900 dark:text-white text-base font-black truncate">{gift.name}</p>
+                      <p className="text-slate-400 text-xs font-bold mt-1.5 uppercase tracking-widest">
+                        Số lượng: {gift.quantity}
+                      </p>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500 text-white px-4 py-2 rounded-2xl font-black uppercase tracking-wider shadow-md shadow-emerald-500/20">Quà tặng</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hiển thị voucher trong Modal */}
+          {order.promotionCode && (
+            <div className="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100/70 dark:border-rose-900/30 p-6 rounded-[2rem] mb-10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-slate-900 dark:text-white font-black text-sm uppercase tracking-wider">Voucher: {order.promotionCode}</p>
+                  <p className="text-slate-400 text-[10px] font-bold mt-0.5 uppercase tracking-wider">Khuyến mãi đã áp dụng</p>
+                </div>
+              </div>
+              {order.discountAmount > 0 && (
+                <p className="text-rose-600 dark:text-rose-400 font-black text-lg">-{order.discountAmount.toLocaleString()}đ</p>
+              )}
+            </div>
+          )}
+
           <div className="pt-8 border-t border-slate-100 flex justify-between items-end">
             <div>
-              <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-1.5">Tổng thanh toán</p>
-              <p className="text-4xl font-black text-primary tracking-tighter">{order.totalAmount.toLocaleString()}đ</p>
+              <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-1.5">
+                {order.discountAmount > 0 ? "Tổng thanh toán" : "Tổng cộng"}
+              </p>
+              <p className="text-4xl font-black text-primary tracking-tighter">
+                {(order.finalAmount !== undefined ? order.finalAmount : (order.totalAmount - (order.discountAmount || 0))).toLocaleString()}đ
+              </p>
+              {order.discountAmount > 0 && (
+                <p className="text-slate-400 font-bold text-xs mt-1 line-through">
+                  Tạm tính: {order.totalAmount.toLocaleString()}đ
+                </p>
+              )}
             </div>
             <Button variant="default" onClick={onClose} className="rounded-2xl px-10 h-14 font-black uppercase tracking-widest">Đóng</Button>
           </div>
@@ -247,13 +300,58 @@ const Orders = () => {
                           Và {order.items.length - 3} sản phẩm khác...
                         </p>
                       )}
+
+                      {/* Hiển thị quà tặng kèm trong danh sách */}
+                      {order.giftItems && order.giftItems.length > 0 && (
+                        <div className="mt-6 p-4 bg-emerald-50/40 dark:bg-emerald-950/15 border border-emerald-100/50 dark:border-emerald-900/20 rounded-[1.5rem] flex flex-col gap-2">
+                          <p className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase font-black tracking-[0.15em] flex items-center gap-1.5">
+                            <Gift className="w-3.5 h-3.5 animate-bounce" /> Quà tặng kèm khuyến mãi:
+                          </p>
+                          <div className="flex flex-wrap gap-3">
+                            {order.giftItems.map((gift, gIdx) => (
+                              <div key={gIdx} className="flex items-center gap-2 bg-white dark:bg-card px-3 py-1.5 rounded-xl border border-emerald-100/50 dark:border-emerald-900/10 shadow-sm">
+                                {gift.imageUrl && (
+                                  <img src={gift.imageUrl} alt={gift.name} className="w-6 h-6 object-cover rounded-md" />
+                                )}
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{gift.name}</span>
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-black">x{gift.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hiển thị voucher trong danh sách */}
+                      {order.promotionCode && (
+                        <div className="mt-4 p-4 bg-rose-50/40 dark:bg-rose-950/15 border border-rose-100/50 dark:border-rose-900/20 rounded-[1.5rem] flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white rounded-xl font-mono text-xs font-black uppercase tracking-wider shadow-md shadow-rose-500/20">
+                              <Tag className="w-3.5 h-3.5" /> {order.promotionCode}
+                            </div>
+                            {order.discountAmount > 0 && (
+                              <p className="text-slate-500 dark:text-slate-400 text-xs font-bold">
+                                Đã giảm <span className="text-rose-600 dark:text-rose-400 font-black">-{order.discountAmount.toLocaleString()}đ</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-8 pt-10 border-t border-slate-50">
                       <div className="flex items-center gap-10">
                         <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-black mb-2 tracking-widest">Tổng cộng</p>
-                          <p className="text-4xl font-black text-primary tracking-tighter">{order.totalAmount.toLocaleString()}đ</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-black mb-2 tracking-widest">
+                            {order.discountAmount > 0 ? "Tổng thanh toán" : "Tổng cộng"}
+                          </p>
+                          <p className="text-4xl font-black text-primary tracking-tighter">
+                            {(order.finalAmount !== undefined ? order.finalAmount : (order.totalAmount - (order.discountAmount || 0))).toLocaleString()}đ
+                          </p>
+                          {order.discountAmount > 0 && (
+                            <p className="text-[10px] text-slate-400 font-bold mt-1 line-through">
+                              {order.totalAmount.toLocaleString()}đ
+                            </p>
+                          )}
                         </div>
                         <div className="hidden sm:block w-px h-12 bg-slate-100" />
                         <div>
