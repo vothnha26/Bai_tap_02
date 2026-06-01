@@ -1,32 +1,19 @@
 import { Link, useNavigate } from 'react-router';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, ShoppingCart, LogOut, Menu, X, Settings } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useCart } from '../context/CartContext';
-import { authApi } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext';
 
 export default function Header() {
   const navigate = useNavigate();
   const { itemCount } = useCart();
+  const { user, logout, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
 
   const handleLogout = async () => {
     if (confirm('Bạn có chắc muốn đăng xuất?')) {
-      try {
-        await authApi.logout();
-      } catch (error) {
-        console.error('Logout failed:', error);
-      }
-      localStorage.clear();
-      setUser(null);
+      await logout();
       navigate('/login');
     }
   };
@@ -195,6 +182,18 @@ export default function Header() {
                   handleLogout();
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Đăng xuất</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+ll flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Đăng xuất</span>

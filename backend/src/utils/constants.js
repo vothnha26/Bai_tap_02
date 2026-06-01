@@ -14,6 +14,28 @@ const USER_STATUS = {
   BANNED: 'BANNED'
 };
 
+const ORDER_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PROCESSING: 'PROCESSING',
+  SHIPPING: 'SHIPPING',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  CANCELLATION_REQUESTED: 'CANCELLATION_REQUESTED',
+};
+
+const PAYMENT_METHOD = {
+  COD: 'COD',
+  MOMO: 'MOMO',
+  VNPAY: 'VNPAY',
+};
+
+const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+};
+
 const ERROR_MESSAGES = {
   EMAIL_ALREADY_EXISTS: 'Email already exists',
   OTP_EXPIRED: 'OTP expired or not found',
@@ -40,7 +62,13 @@ const ERROR_MESSAGES = {
   RESET_PASSWORD_OTP_EXPIRED: 'OTP has expired, please request again',
   RESET_PASSWORD_INVALID_OTP: 'Invalid OTP',
   RESET_PASSWORD_OTP_LOCKED: 'Invalid OTP too many times. Please request a new OTP.',
-  NEW_PASSWORD_SAME_AS_OLD: 'New password must differ from old'
+  NEW_PASSWORD_SAME_AS_OLD: 'New password must differ from old',
+  // Order messages
+  ORDER_CANCEL_SUCCESS: 'Hủy đơn hàng thành công',
+  ORDER_CANCELLATION_REQUESTED: 'Đã gửi yêu cầu hủy đơn hàng cho Shop',
+  ORDER_NOT_FOUND: 'Order not found',
+  ORDER_UNAUTHORIZED: 'Unauthorized access to order',
+  ORDER_CANNOT_CANCEL: 'Đơn hàng đang giao hoặc đã giao, không thể hủy'
 };
 
 const JWT_CONFIG = {
@@ -53,6 +81,9 @@ module.exports = {
   AUTH_PROVIDERS,
   USER_ROLES,
   USER_STATUS,
+  ORDER_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
   ERROR_MESSAGES,
   JWT_CONFIG
 };

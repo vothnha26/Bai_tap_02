@@ -93,7 +93,7 @@ export default function ManageCategories() {
           </button>
         </nav>
         <div className="p-4 border-t border-gray-800">
-          <button onClick={() => { localStorage.clear(); navigate('/login'); }} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
+          <button onClick={async () => { await logout(); navigate('/login'); }} className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white transition w-full text-left">
             <LogOut className="w-5 h-5" />
             <span>Đăng xuất</span>
           </button>
@@ -186,6 +186,10 @@ export default function ManageCategories() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
     </div>
   );
 }

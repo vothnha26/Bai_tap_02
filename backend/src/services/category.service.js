@@ -1,4 +1,5 @@
 const categoryRepository = require('../repositories/category.repository');
+const { generateSlug } = require('../utils/utils');
 
 class CategoryService {
   async getAllCategories() {
@@ -7,12 +8,7 @@ class CategoryService {
 
   async createCategory(categoryData) {
     if (!categoryData.slug) {
-      categoryData.slug = categoryData.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w ]+/g, '')
-        .replace(/ +/g, '-');
+      categoryData.slug = generateSlug(categoryData.name);
     }
     return await categoryRepository.create(categoryData);
   }

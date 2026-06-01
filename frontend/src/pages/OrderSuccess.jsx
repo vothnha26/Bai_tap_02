@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import orderService from '../services/order.service';
 import { CheckCircle, Package, Truck, CreditCard, AlertTriangle, XCircle } from 'lucide-react';
+import { ORDER_STATUS } from '../utils/constants';
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
@@ -54,16 +55,23 @@ const OrderSuccess = () => {
           <div className="absolute top-5 left-0 w-full h-1 bg-white/10 -z-0"></div>
           
           {[
-            { key: 'PENDING', label: 'Đặt hàng' },
-            { key: 'CONFIRMED', label: 'Xác nhận' },
-            { key: 'PROCESSING', label: 'Chuẩn bị' },
-            { key: 'SHIPPING', label: 'Giao hàng' },
-            { key: 'DELIVERED', label: 'Thành công' }
-          ].map((step, index, array) => {
-            const statusOrder = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
+            { key: ORDER_STATUS.PENDING, label: 'Đặt hàng' },
+            { key: ORDER_STATUS.CONFIRMED, label: 'Xác nhận' },
+            { key: ORDER_STATUS.PROCESSING, label: 'Chuẩn bị' },
+            { key: ORDER_STATUS.SHIPPING, label: 'Giao hàng' },
+            { key: ORDER_STATUS.DELIVERED, label: 'Thành công' }
+          ].map((step, index) => {
+            const statusOrder = [
+              ORDER_STATUS.PENDING, 
+              ORDER_STATUS.CONFIRMED, 
+              ORDER_STATUS.PROCESSING, 
+              ORDER_STATUS.SHIPPING, 
+              ORDER_STATUS.DELIVERED, 
+              ORDER_STATUS.CANCELLED
+            ];
             const currentIdx = statusOrder.indexOf(order.status);
             const stepIdx = statusOrder.indexOf(step.key);
-            const isCompleted = stepIdx <= currentIdx && order.status !== 'CANCELLED';
+            const isCompleted = stepIdx <= currentIdx && order.status !== ORDER_STATUS.CANCELLED;
             const isCurrent = step.key === order.status;
 
             return (
@@ -80,13 +88,13 @@ const OrderSuccess = () => {
             );
           })}
         </div>
-        {order.status === 'CANCELLED' && (
+        {order.status === ORDER_STATUS.CANCELLED && (
           <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500">
             <XCircle className="w-5 h-5" />
             <span className="font-bold">Đơn hàng này đã bị hủy</span>
           </div>
         )}
-        {order.status === 'CANCELLATION_REQUESTED' && (
+        {order.status === ORDER_STATUS.CANCELLATION_REQUESTED && (
           <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center gap-3 text-yellow-500">
             <AlertTriangle className="w-5 h-5" />
             <span className="font-bold">Đang chờ Shop xác nhận yêu cầu hủy đơn</span>

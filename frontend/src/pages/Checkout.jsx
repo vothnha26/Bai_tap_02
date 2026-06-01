@@ -4,9 +4,11 @@ import { useNavigate, Link } from 'react-router';
 import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag } from 'lucide-react';
 import orderService from '../services/order.service';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../context/AuthContext';
 
 const Checkout = () => {
   const { cart, loading: cartLoading, clearCart, itemCount } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -17,16 +19,14 @@ const Checkout = () => {
   });
 
   useEffect(() => {
-    // Pre-fill from localStorage user info
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-    if (storedUser) {
+    if (user) {
       setFormData(prev => ({
         ...prev,
-        phone: storedUser.phone || '',
-        shippingAddress: storedUser.address || ''
+        phone: user.phone || '',
+        shippingAddress: user.address || ''
       }));
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {

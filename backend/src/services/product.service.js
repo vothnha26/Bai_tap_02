@@ -1,4 +1,5 @@
 const productRepository = require('../repositories/product.repository');
+const { generateSlug } = require('../utils/utils');
 
 class ProductService {
   async getHomePageData() {
@@ -46,24 +47,14 @@ class ProductService {
   async createProduct(productData) {
     // Tự động tạo slug từ tên nếu chưa có
     if (!productData.slug) {
-      productData.slug = productData.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w ]+/g, '')
-        .replace(/ +/g, '-');
+      productData.slug = generateSlug(productData.name);
     }
     return await productRepository.create(productData);
   }
 
   async updateProduct(id, productData) {
     if (productData.name && !productData.slug) {
-      productData.slug = productData.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w ]+/g, '')
-        .replace(/ +/g, '-');
+      productData.slug = generateSlug(productData.name);
     }
     return await productRepository.update(id, productData);
   }

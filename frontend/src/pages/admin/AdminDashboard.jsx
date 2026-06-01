@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router';
 import { productApi } from '../../services/product.service';
 import { Package, Plus, LayoutDashboard, LogOut, Star, Trash2, Edit2, Loader2, TrendingUp, ShoppingBag } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { user, isAdmin, logout } = useAuth();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -35,14 +37,13 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || user.role !== 'ADMIN') {
+    if (!isAdmin) {
       navigate('/login');
       return;
     }
 
     fetchProducts(page);
-  }, [navigate, page]);
+  }, [navigate, page, isAdmin]);
 
   const handleDelete = async (id) => {
     if (confirm('Bạn có chắc muốn xóa sản phẩm này? Thao tác này không thể hoàn tác.')) {
@@ -59,8 +60,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

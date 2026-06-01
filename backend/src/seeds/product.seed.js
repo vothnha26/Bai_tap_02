@@ -3,6 +3,7 @@ require('dotenv').config();
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const connectDB = require('../config/mongoose');
+const { generateSlug } = require('../utils/utils');
 
 /**
  * BaseSeeder Class - Template Method Pattern
@@ -101,9 +102,7 @@ class ProductSeeder extends BaseSeeder {
 
     for (let i = 0; i < 50; i++) {
       const name = productNames[i] || `Sản phẩm mẫu số ${i + 1}`;
-      const slug = name.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w ]+/g, '').replace(/ +/g, '-') + `-${i + 1}`;
+      const slug = generateSlug(name) + `-${i + 1}`;
 
       const basePrice = 200000 + Math.floor(Math.random() * 20000000);
 

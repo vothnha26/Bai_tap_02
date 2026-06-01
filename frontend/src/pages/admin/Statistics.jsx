@@ -16,15 +16,16 @@ import {
   Activity
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Statistics() {
   const navigate = useNavigate();
+  const { isAdmin, logout } = useAuth();
   const [statsData, setStatsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || user.role !== 'ADMIN') {
+    if (!isAdmin) {
       navigate('/login');
       return;
     }
@@ -37,7 +38,7 @@ export default function Statistics() {
         console.error('Error fetching stats:', error);
         if (error.message.includes('expired')) {
           alert('Phiên làm việc hết hạn, vui lòng đăng nhập lại');
-          localStorage.clear();
+          await logout();
           navigate('/login');
         }
       } finally {
@@ -46,10 +47,10 @@ export default function Statistics() {
     };
 
     fetchStats();
-  }, [navigate]);
+  }, [navigate, isAdmin]);
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

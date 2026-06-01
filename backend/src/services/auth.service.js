@@ -336,7 +336,7 @@ class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     const updateResult = await userRepository.updateLocalPassword(normalizedEmail, passwordHash);
-    if (!updateResult.count) {
+    if (!updateResult) {
       const error = new Error('Local account not found');
       error.status = 404;
       throw error;

@@ -273,7 +273,7 @@ const Orders = () => {
                           Chi tiết
                         </Button>
                         
-                        {(order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PROCESSING') && (
+                        {(order.status === ORDER_STATUS.PENDING || order.status === ORDER_STATUS.CONFIRMED || order.status === ORDER_STATUS.PROCESSING) && (
                           <Button
                             variant="destructive"
                             onClick={() => handleCancel(order.id)}

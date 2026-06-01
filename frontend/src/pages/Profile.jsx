@@ -5,14 +5,16 @@ import { getProfile, updateProfile } from "../services/user.service";
 import orderService from "../services/order.service";
 import { Button } from "../components/ui/button";
 
+import { ORDER_STATUS } from "../utils/constants";
+
 const statusConfig = {
-  PENDING: { label: 'Đơn hàng mới', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
-  CONFIRMED: { label: 'Đã xác nhận', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: CheckCircle },
-  PROCESSING: { label: 'Đang chuẩn bị hàng', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: Package },
-  SHIPPING: { label: 'Đang giao hàng', color: 'text-orange-500', bg: 'bg-orange-500/10', icon: Truck },
-  DELIVERED: { label: 'Giao thành công', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
-  CANCELLED: { label: 'Đã hủy', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
-  CANCELLATION_REQUESTED: { label: 'Yêu cầu hủy', color: 'text-gray-400', bg: 'bg-gray-400/10', icon: AlertTriangle },
+  [ORDER_STATUS.PENDING]: { label: 'Đơn hàng mới', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
+  [ORDER_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: CheckCircle },
+  [ORDER_STATUS.PROCESSING]: { label: 'Đang chuẩn bị hàng', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: Package },
+  [ORDER_STATUS.SHIPPING]: { label: 'Đang giao hàng', color: 'text-orange-500', bg: 'bg-orange-500/10', icon: Truck },
+  [ORDER_STATUS.DELIVERED]: { label: 'Giao thành công', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
+  [ORDER_STATUS.CANCELLED]: { label: 'Đã hủy', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
+  [ORDER_STATUS.CANCELLATION_REQUESTED]: { label: 'Yêu cầu hủy', color: 'text-gray-400', bg: 'bg-gray-400/10', icon: AlertTriangle },
 };
 
 const OrderDetailModal = ({ order, onClose }) => {
@@ -242,7 +244,7 @@ const Profile = () => {
                 </p>
               )}
               
-              {profile.role === 'ADMIN' && (
+              {isAdmin && (
                 <div className="mt-3 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" />
                   QUẢN TRỊ VIÊN

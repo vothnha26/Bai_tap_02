@@ -261,33 +261,33 @@ const ManageOrders = () => {
                       </button>
 
                       <div className="flex flex-wrap gap-3">
-                        {order.status === 'CANCELLATION_REQUESTED' && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'CANCELLED')} className="px-6 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-red-100">
+                        {order.status === ORDER_STATUS.CANCELLATION_REQUESTED && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELLED)} className="px-6 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-red-100">
                             Đồng ý hủy
                           </button>
                         )}
-                        {order.status === 'PENDING' && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'CONFIRMED')} className="px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100">
+                        {order.status === ORDER_STATUS.PENDING && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CONFIRMED)} className="px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100">
                             Xác nhận
                           </button>
                         )}
-                        {order.status === 'CONFIRMED' && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'PROCESSING')} className="px-6 py-3 bg-purple-600 text-white rounded-2xl hover:bg-purple-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-100">
+                        {order.status === ORDER_STATUS.CONFIRMED && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.PROCESSING)} className="px-6 py-3 bg-purple-600 text-white rounded-2xl hover:bg-purple-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-100">
                             Chuẩn bị
                           </button>
                         )}
-                        {order.status === 'PROCESSING' && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'SHIPPING')} className="px-6 py-3 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-100">
+                        {order.status === ORDER_STATUS.PROCESSING && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.SHIPPING)} className="px-6 py-3 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-100">
                             Giao hàng
                           </button>
                         )}
-                        {order.status === 'SHIPPING' && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'DELIVERED')} className="px-6 py-3 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-green-100">
+                        {order.status === ORDER_STATUS.SHIPPING && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.DELIVERED)} className="px-6 py-3 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-green-100">
                             Thành công
                           </button>
                         )}
-                        {['PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) && (
-                          <button onClick={() => handleUpdateStatus(order.id, 'CANCELLED')} className="px-6 py-3 border-2 border-red-50 text-red-500 rounded-2xl hover:bg-red-50 transition-all text-xs font-black uppercase tracking-widest">
+                        {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.PROCESSING].includes(order.status) && (
+                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELLED)} className="px-6 py-3 border-2 border-red-50 text-red-500 rounded-2xl hover:bg-red-50 transition-all text-xs font-black uppercase tracking-widest">
                             Hủy đơn
                           </button>
                         )}

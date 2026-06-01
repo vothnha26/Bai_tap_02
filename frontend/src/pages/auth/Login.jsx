@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import { authApi } from '../../services/auth.service';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -20,8 +22,8 @@ export default function Login() {
     try {
       const response = await authApi.login(formData);
       // Backend dùng HttpOnly cookie cho token, nên chúng ta không cần lưu token thủ công
-      // Chỉ lưu thông tin user để hiển thị trên UI
-      localStorage.setItem('user', JSON.stringify(response.user));
+      // Chỉ lưu thông tin user thông qua AuthContext
+      login(response.user);
       
       alert('Đăng nhập thành công!');
       
