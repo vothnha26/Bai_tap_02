@@ -1,17 +1,17 @@
-# Hướng Dẫn Sử Dụng & Tài Liệu: Tính Năng Đăng Ký - PubliCast
+# Hướng Dẫn Sử Dụng & Tài Liệu Dự Án - PubliCast
 
-Tài liệu này tập trung vào chức năng **Đăng ký tài khoản (Registration)** và **Xác thực OTP qua Email**, giúp các thành viên trong team nắm vững quy trình thiết lập và luồng hoạt động của hệ thống.
+Tài liệu này tổng hợp về kiến trúc, các bước thiết lập, các tính năng đặc biệt (Đăng ký, Xác thực OTP, Hệ thống điểm thưởng sản phẩm) và quy chuẩn phát triển của dự án PubliCast.
 
 ---
 
 ## 🛠️ Công Nghệ Sử Dụng
 
-- **Ngôn ngữ & Framework:** NodeJS, ExpressJS.
-- **Cơ sở dữ liệu:** MySQL 8.0, Redis (Lưu mã OTP).
-- **ORM:** Prisma (Quản lý Database).
-- **Thư viện chính (Code):**
+- **Ngôn ngữ & Framework:** NodeJS, ExpressJS (Backend) & ReactJS, Vite, Tailwind CSS (Frontend).
+- **Cơ sở dữ liệu:** MongoDB (lưu trữ chính), Redis (Lưu OTP, Rate Limiting, Cart Session, BullMQ).
+- **ODM:** Mongoose (Giao tiếp MongoDB).
+- **Thư viện chính:**
+  - `ioredis` & `bullmq`: Quản lý hàng đợi bất đồng bộ (Email, Review Moderation, Reward Processing).
   - `bcryptjs`: Mã hóa mật khẩu.
-  - `express-validator`: Validate dữ liệu đầu vào.
   - `express-rate-limit`: Giới hạn request (Spam protection).
   - `nodemailer`: Gửi email xác thực.
   - `jest` & `supertest`: Kiểm thử tự động.
@@ -22,16 +22,17 @@ Tài liệu này tập trung vào chức năng **Đăng ký tài khoản (Regist
 
 ### Bước 1: Cài đặt thư viện
 ```bash
-# Tại thư mục gốc
-npm install
-
 # Tại thư mục backend
 cd backend
+npm install
+
+# Tại thư mục frontend
+cd ../frontend
 npm install
 ```
 
 ### Bước 2: Khởi động Hạ tầng (Docker)
-Đảm bảo Docker đang chạy, sau đó khởi động MySQL (mặc định cổng `3307`) và Redis:
+Đảm bảo Docker Desktop đang chạy, sau đó khởi động MongoDB (mặc định cổng `27017`) và Redis (mặc định cổng `6379`):
 ```bash
 docker compose up -d
 ```
@@ -39,106 +40,61 @@ docker compose up -d
 ### Bước 3: Cấu hình Môi trường (.env)
 Sao chép `.env.example` thành `.env` bên trong thư mục `backend/` và điền đầy đủ thông tin:
 ```bash
-# Di chuyển vào backend trước khi copy
 cd backend
 copy .env.example .env
 ```
 
 **Lưu ý quan trọng về Email (Gmail):**
-Để gửi được mail thật, bạn cần:
+Để gửi được mail thật, bạn cần cấu hình:
 1.  **GMAIL_USER**: Địa chỉ Gmail của bạn.
-2.  **GMAIL_PASS**: **App Password** (Mật khẩu ứng dụng 16 ký tự), không phải mật khẩu đăng nhập Gmail.
-3.  **EMAIL_PORT**: Luôn để `465` cho Gmail.
+2.  **GMAIL_PASS**: **App Password** (Mật khẩu ứng dụng 16 ký tự).
+3.  **EMAIL_PORT**: `465`.
 4.  **EMAIL_HOST**: `smtp.gmail.com`.
 
-*Nếu để giá trị mặc định (`your_email@gmail.com`), hệ thống sẽ tự động chuyển sang chế độ **CONSOLE MODE** (OTP sẽ in ra màn hình terminal thay vì gửi mail).*
+*Nếu để giá trị mặc định (`your_email@gmail.com`), hệ thống sẽ tự động chuyển sang chế độ **CONSOLE MODE** (OTP sẽ in ra màn hình terminal).*
 
-### Bước 4: Khởi tạo & Quản lý Database
-Chạy migration để tạo các bảng:
+### Bước 4: Khởi tạo dữ liệu mẫu (Seed Data)
+Nạp dữ liệu mẫu cho hệ thống tại thư mục `backend/`:
 ```bash
-npx prisma migrate dev
-```
+# Nạp sản phẩm mẫu
+npm run seed
 
-**Lệnh xóa sạch dữ liệu (Reset DB):**
-Khi muốn làm sạch database trong quá trình phát triển:
-```bash
-# Cách 1: Reset hoàn toàn (xóa bảng và tạo lại)
-npx prisma migrate reset
+# Nạp khuyến mãi mẫu
+npm run seed:promotion
 
-# Cách 2: Ép buộc reset nhanh (Khuyên dùng khi dev)
-npx prisma db push --force-reset
+# Nạp dữ liệu hệ thống điểm thưởng (Tiers, Benefits, Rules)
+node src/seeds/reward_system.seed.js
 ```
 
 ---
 
-## 🔄 Quy Trình Đăng Ký (Workflow)
+## 📦 Các Module & Quy Trình Nổi Bật
 
-Hệ thống hoạt động theo 2 giai đoạn chính nhằm đảm bảo tính xác thực:
+### 1. Đăng ký & Xác thực OTP (Authentication)
+*   **Giai đoạn 1 (Đăng ký):** Lưu thông tin user với trạng thái `INACTIVE`, tạo mã OTP 6 số lưu vào Redis (TTL 10 phút) và gửi mail cho người dùng.
+*   **Giai đoạn 2 (Xác thực):** Kiểm tra mã khớp trong Redis, cập nhật user thành `ACTIVE` và xóa mã OTP trong Redis.
 
-### Giai đoạn 1: Đăng ký tài khoản
-1. **Validation**: Kiểm tra email hợp lệ, mật khẩu tối thiểu 8 ký tự, xác nhận mật khẩu khớp.
-2. **Kiểm tra trùng lặp**: Đảm bảo Email chưa tồn tại trong hệ thống.
-3. **Lưu trữ**: Tạo bản ghi User trong MySQL với trạng thái `INACTIVE`.
-4. **OTP**: Sinh mã 6 số ngẫu nhiên, lưu vào **Redis** với thời gian hết hạn (10 phút).
-5. **Thông báo**: Gửi email chứa mã OTP đến địa chỉ email người dùng đã đăng ký.
+### 2. Chuỗi Xử lý Đơn hàng (Chain of Responsibility)
+Tách luồng đặt hàng thành các bước độc lập giúp dễ dàng mở rộng và tối ưu hóa logic:
+`CartValidation` -> `StockValidation` -> `Promotion` -> `OrderSave` -> `CartClear`.
 
-### Giai đoạn 2: Xác minh OTP (Kích hoạt tài khoản)
-1. **Truy vấn Redis**: Lấy mã OTP đã lưu dựa trên Email.
-2. **So sánh**: Nếu khớp, cập nhật trạng thái User thành `ACTIVE` trong MySQL và xóa OTP khỏi Redis.
-
----
-
-## 📝 Hướng Dẫn Sử Dụng API (Dành cho Frontend)
-
-### 1. API Đăng ký (Register)
-- **Method:** `POST`
-- **Endpoint:** `/api/auth/register`
-- **Body:**
-```json
-{
-  "name": "Nguyen Van A",
-  "email": "test@example.com",
-  "password": "password123",
-  "confirmPassword": "password123"
-}
-```
-
-### 2. API Xác minh OTP (Verify OTP)
-- **Method:** `POST`
-- **Endpoint:** `/api/auth/verify-otp`
-- **Body:**
-```json
-{
-  "email": "test@example.com",
-  "otp": "123456"
-}
-```
-
----
-
-## 💻 Hướng Dẫn Debug & Mở rộng
-
-**1. Kiểm tra cấu hình Email:**
-Khi khởi động server (`npm run dev`), hãy quan sát log ở Terminal để biết hệ thống đang dùng cấu hình nào:
-```text
-[Email Config] Using User: vothanhnha152@gmail.com
-[Email Config] Port: 465, Secure: true
-[Email Config] Mode: SMTP
-```
-
-**2. Repository (Thao tác Database):**
-Sử dụng `UserRepository` để quản lý bản ghi User và Account thông qua Prisma.
-
-**3. Constants (Hằng số):**
-Tuyệt đối không sử dụng Magic String. Hãy định nghĩa và sử dụng `ERROR_MESSAGES` hoặc `USER_STATUS` trong `src/utils/constants.js`.
+### 3. Hệ thống Điểm thưởng & Thành viên (Reward System)
+*   **Hàng đợi BullMQ:** Cộng điểm thưởng và nâng hạng thành viên bất đồng bộ thông qua `RewardQueue` và `RewardWorker`.
+*   **Hạ hạng tự động:** Định kỳ quét và hạ hạng thành viên thông qua `TierDowngradeWorker`.
+*   **Tích điểm sản phẩm (`ProductRewardRule`):** Admin cấu hình điểm thưởng cố định riêng cho từng sản phẩm. Hệ thống tự động đồng bộ và hiển thị điểm dự kiến nhận được trên Chi tiết sản phẩm, Giỏ hàng và Thanh toán.
 
 ---
 
 ## 🧪 Kiểm Thử (Testing)
-Dự án tích hợp kiểm thử tự động để đảm bảo tính ổn định:
-- Chạy toàn bộ tests: `npm test`
-- Chạy test tích hợp cho Auth: `npx jest tests/auth.integration.test.js`
 
-**Lưu ý:** Mỗi lần thay đổi file `.env`, bạn bắt buộc phải **Khởi động lại Server** (Ctrl + C và chạy lại) để áp dụng thay đổi.
+Dự án tích hợp kiểm thử tự động toàn diện bằng Jest & Supertest:
+```bash
+# Tại thư mục backend
+$env:USE_MEMORY_REDIS="true"; npx jest --runInBand --forceExit
+```
+
+*   **Chạy toàn bộ tests:** `npm test`
+*   **Test tích hợp module điểm thưởng:** `npx jest src/tests/reward.integration.test.js`
+*   **Test CRUD luật điểm thưởng:** `npx jest src/tests/product_reward_rule.test.js`
 
 Chúc team phát triển tính năng thuận lợi! 🚀

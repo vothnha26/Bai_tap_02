@@ -25,6 +25,10 @@ Tài liệu này lưu trữ tóm tắt về kiến trúc, các kỹ thuật sử
   - **Facade (`InventoryService`):** Điểm truy cập duy nhất để thay đổi kho, đảm bảo tính nhất quán.
   - **Factory (`InventoryTransactionFactory`):** Tự động tạo Audit Logs (nhật ký biến động) cho mọi hành động (SALE, RESTOCK, STOCK_TAKE...).
 - **Promotion Module:** Sử dụng mô hình Strategy/Facade để tính toán các loại giảm giá (Phần trăm, Số tiền cố định, Miễn phí vận chuyển).
+- **Reward Module (Queue-Based & Tiering System):**
+  - **Queue-Based (BullMQ):** Sử dụng `RewardQueue` và `RewardWorker` để tính toán và cộng điểm thưởng bất đồng bộ sau khi đơn hàng chuyển sang `DELIVERED` hoặc Review được phê duyệt.
+  - **Tier Upgrade/Downgrade:** Tự động hóa việc nâng hạng thành viên (BRONZE -> SILVER -> GOLD) khi điểm tích lũy đạt ngưỡng, và tích hợp `TierDowngradeWorker` để hạ hạng khi hết chu kỳ tích lũy.
+  - **ProductRewardRule:** Cấu hình điểm thưởng cố định riêng cho từng sản phẩm, tự động tích hợp hiển thị điểm dự kiến ở Product Detail, Cart và Checkout.
 
 ## 🎨 Kiến trúc Frontend
 - **Framework:** React (Vite), Tailwind CSS.
@@ -36,7 +40,7 @@ Tài liệu này lưu trữ tóm tắt về kiến trúc, các kỹ thuật sử
 
 ## 🛠️ Quy chuẩn kỹ thuật (Mandates)
 - **SOLID:** Tuân thủ tuyệt đối, đặc biệt là SRP và OCP.
-- **Design Patterns:** Ưu tiên áp dụng (Strategy, Factory, Facade, CoR) khi xử lý logic rẽ nhánh.
+- **Design Patterns:** Ưu tiên áp dụng (Strategy, Factory, Facade, CoR, Observer) khi xử lý logic rẽ nhánh.
 - **No Magic String:** Tất cả hằng số định nghĩa tại `backend/src/utils/constants.js`.
 - **Quy trình:** Sequence Diagram -> Implementation -> Automated Testing (Jest/Supertest cho BE, Selenium cho UI).
 
@@ -44,4 +48,5 @@ Tài liệu này lưu trữ tóm tắt về kiến trúc, các kỹ thuật sử
 - `npm run dev`: Chạy server dev (nodemon).
 - `npm run seed`: Nạp dữ liệu mẫu sản phẩm.
 - `npm run seed:promotion`: Nạp dữ liệu mẫu khuyến mãi.
+- `node src/seeds/reward_system.seed.js`: Nạp dữ liệu mẫu hệ thống điểm thưởng (Tiers, Benefits, Rules).
 - `npm test`: Chạy toàn bộ test suite.
