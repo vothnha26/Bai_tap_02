@@ -1,63 +1,78 @@
 require('dotenv').config();
+const mongoose = require('mongoose');
+const connectDB = require('./config/mongoose');
 const redisClient = require('./config/redis');
-const emailQueue = require('./services/email.queue');
-const emailService = require('./services/email.service');
 
-const processJobs = async () => {
-  console.log('--------------------------------------------------');
-  console.log(`[Worker] Email worker started at ${new Date().toLocaleString()}`);
-  console.log(`[Worker] Listening on queue: "${emailQueue.queueName}"`);
-  console.log('--------------------------------------------------');
+// Existing Email Queue (Manual Redis List)
+const emailQueue = require('./services/email/email.queue');
+const emailService = require('./services/email/email.service');
 
-  // Kiểm tra kết nối Redis trước khi bắt đầu
-  if (!redisClient.isOpen && process.env.USE_MEMORY_REDIS !== 'true') {
-    console.log('[Worker] Waiting for Redis connection...');
-    // Đợi một chút để Redis kịp kết nối
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
+// New BullMQ Workers
+const reviewWorker = require('./services/review/ReviewWorker');
+const rewardWorker = require('./services/reward/RewardWorker');
+const { downgradeWorker, scheduleMonthlyDowngrade } = require('./services/reward/TierDowngradeWorker');
 
+/**
+ * Process Legacy Email Jobs (Manual BRPOP)
+ */
+const processEmailJobs = async () => {
+  console.log(`[Worker] Legacy Email worker listening on: "${emailQueue.queueName}"`);
+  
   while (true) {
     try {
-      // BRPOP trả về { key, element } hoặc null
       const result = await redisClient.brPop(emailQueue.queueName, 0);
-      
       if (result) {
         const element = typeof result === 'string' ? result : result.element;
         const job = JSON.parse(element);
         const { type, data } = job;
 
-        console.log(`[Worker][${new Date().toLocaleTimeString()}] 📥 Received job: ${type} for ${data.email}`);
-
-        try {
-          switch (type) {
-            case 'otp':
-              await emailService.sendOTP(data.email, data.otp);
-              break;
-            case 'forgot_password':
-              await emailService.sendForgotPasswordOTP(data.email, data.otp);
-              break;
-            default:
-              console.warn(`[Worker] ⚠️ Unknown job type: ${type}`);
-          }
-          console.log(`[Worker] ✅ Successfully processed ${type} for ${data.email}`);
-        } catch (error) {
-          console.error(`[Worker] ❌ Failed to process job ${type}:`, error.message);
-        }
+        console.log(`[EmailWorker] Processing ${type} for ${data.email}`);
+        if (type === 'otp') await emailService.sendOTP(data.email, data.otp);
+        else if (type === 'forgot_password') await emailService.sendForgotPasswordOTP(data.email, data.otp);
       }
     } catch (error) {
-      console.error('[Worker] 💥 Error in worker loop:', error.message);
+      console.error('[EmailWorker] Error:', error.message);
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
 };
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n[Worker] 🛑 Shutting down gracefully...');
-  process.exit(0);
-});
+const startWorkers = async () => {
+  await connectDB();
 
-processJobs().catch(err => {
+  console.log('--------------------------------------------------');
+  console.log(`[Worker] PubliCast System Workers started at ${new Date().toLocaleString()}`);
+  console.log('--------------------------------------------------');
+
+  // Start BullMQ Workers
+  console.log('[Worker] BullMQ Review Worker: ONLINE');
+  console.log('[Worker] BullMQ Reward Worker: ONLINE');
+  console.log('[Worker] BullMQ Tier Downgrade Worker: ONLINE');
+
+  // Schedule repeatable jobs
+  await scheduleMonthlyDowngrade();
+  console.log('[Worker] Cron Jobs scheduled.');
+
+  // Start Legacy Workers
+  processEmailJobs().catch(err => console.error('[Worker] EmailWorker Fatal:', err));
+};
+
+// Handle graceful shutdown
+const shutdown = async () => {
+  console.log('\n[Worker] 🛑 Shutting down gracefully...');
+  await Promise.all([
+    reviewWorker.close(),
+    rewardWorker.close(),
+    downgradeWorker.close(),
+    mongoose.connection.close(),
+  ]);
+  process.exit(0);
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+startWorkers().catch(err => {
   console.error('[Worker] 💀 Fatal error:', err);
   process.exit(1);
 });

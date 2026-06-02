@@ -1,5 +1,5 @@
-const redisClient = require('../config/redis');
-const productRepository = require('../repositories/product.repository');
+const redisClient = require('../../config/redis');
+const productRepository = require('../../repositories/product.repository');
 
 class CartService {
   constructor() {
@@ -10,17 +10,28 @@ class CartService {
   async getCart(userId) {
     const cartData = await redisClient.get(`${this.keyPrefix}${userId}`);
     if (!cartData) {
-      return { items: [], totalAmount: 0 };
+      return { items: [], totalAmount: 0, totalRewardPoints: 0 };
     }
     const cart = JSON.parse(cartData);
 
     if (cart.items && cart.items.length > 0) {
-      const priceService = require('./price.service');
+      const priceService = require('../promotion/price.service');
       const productIds = cart.items.map(item => item.productId);
       const products = await Promise.all(productIds.map(id => productRepository.findById(id)));
       
       const validProducts = products.filter(p => p !== null);
       const productsWithPrices = await priceService.getEffectivePrices(validProducts);
+      
+      // Load reward rules for these products
+      const ProductRewardRule = require('../../models/ProductRewardRule');
+      const rewardRules = await ProductRewardRule.find({
+        productId: { $in: productIds },
+        isActive: true
+      });
+      const rewardRuleMap = {};
+      rewardRules.forEach(rule => {
+        rewardRuleMap[rule.productId.toString()] = rule.rewardPoints;
+      });
       
       const priceMap = {};
       productsWithPrices.forEach(p => {
@@ -31,12 +42,15 @@ class CartService {
       cart.items = cart.items.map(item => {
         const dbProduct = priceMap[item.productId];
         if (dbProduct) {
+          const dbPoints = rewardRuleMap[item.productId] || 0;
           if (item.price !== dbProduct.effectivePrice || 
               item.hasActiveDiscount !== dbProduct.hasActiveDiscount ||
-              item.discountIsStackable !== dbProduct.discountIsStackable) {
+              item.discountIsStackable !== dbProduct.discountIsStackable ||
+              item.rewardPoints !== dbPoints) {
             item.price = dbProduct.effectivePrice;
             item.hasActiveDiscount = dbProduct.hasActiveDiscount;
             item.discountIsStackable = dbProduct.discountIsStackable;
+            item.rewardPoints = dbPoints;
             cartChanged = true;
           }
           return item;
@@ -60,8 +74,13 @@ class CartService {
       throw new Error('Product not found');
     }
 
-    const priceService = require('./price.service');
+    const priceService = require('../promotion/price.service');
     const productWithPrice = await priceService.getEffectivePrices(product);
+
+    // Get reward rule for this product
+    const ProductRewardRule = require('../../models/ProductRewardRule');
+    const rewardRule = await ProductRewardRule.findOne({ productId, isActive: true });
+    const rewardPoints = rewardRule ? rewardRule.rewardPoints : 0;
 
     let cart = await this.getCart(userId);
     const existingItemIndex = cart.items.findIndex(item => item.productId === productId);
@@ -71,6 +90,7 @@ class CartService {
       cart.items[existingItemIndex].price = productWithPrice.effectivePrice;
       cart.items[existingItemIndex].hasActiveDiscount = productWithPrice.hasActiveDiscount;
       cart.items[existingItemIndex].discountIsStackable = productWithPrice.discountIsStackable;
+      cart.items[existingItemIndex].rewardPoints = rewardPoints;
     } else {
       cart.items.push({
         productId: product._id.toString(),
@@ -79,7 +99,8 @@ class CartService {
         quantity: quantity,
         imageUrl: product.images && product.images.length > 0 ? product.images[0] : '',
         hasActiveDiscount: productWithPrice.hasActiveDiscount,
-        discountIsStackable: productWithPrice.discountIsStackable
+        discountIsStackable: productWithPrice.discountIsStackable,
+        rewardPoints: rewardPoints
       });
     }
 
@@ -118,12 +139,15 @@ class CartService {
 
   async clearCart(userId) {
     await redisClient.del(`${this.keyPrefix}${userId}`);
-    return { items: [], totalAmount: 0 };
+    return { items: [], totalAmount: 0, totalRewardPoints: 0 };
   }
 
   _calculateTotal(cart) {
     cart.totalAmount = cart.items.reduce((total, item) => {
       return total + (item.price * item.quantity);
+    }, 0);
+    cart.totalRewardPoints = cart.items.reduce((total, item) => {
+      return total + ((item.rewardPoints || 0) * item.quantity);
     }, 0);
   }
 

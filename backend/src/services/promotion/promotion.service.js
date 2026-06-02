@@ -1,5 +1,5 @@
-const promotionRepository = require('../repositories/promotion.repository');
-const promotionCalculatorFacade = require('./promotion/promotion.facade');
+const promotionRepository = require('../../repositories/promotion.repository');
+const promotionCalculatorFacade = require('./promotion.facade');
 
 class PromotionService {
   async createPromotion(data) {

@@ -1,11 +1,11 @@
 const bcrypt = require('bcryptjs');
-const userRepository = require('../repositories/user.repository');
+const userRepository = require('../../repositories/user.repository');
 const otpService = require('./otp.service');
-const emailQueue = require('./email.queue');
-const jwtUtils = require('../utils/jwt.utils');
-const redisClient = require('../config/redis');
+const emailQueue = require('../email/email.queue');
+const jwtUtils = require('../../utils/jwt.utils');
+const redisClient = require('../../config/redis');
 
-const { USER_STATUS, AUTH_PROVIDERS, ERROR_MESSAGES } = require('../utils/constants');
+const { USER_STATUS, AUTH_PROVIDERS, ERROR_MESSAGES } = require('../../utils/constants');
 
 const FORGOT_PASSWORD_OTP_PREFIX = 'forgot-otp';
 const FORGOT_PASSWORD_ATTEMPTS_PREFIX = 'forgot-otp-attempts';

@@ -56,18 +56,23 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Gọi API refresh token. Backend trả về token mới qua Cookie
-        await axios.post('http://localhost:3000/api/auth/refresh', {}, { withCredentials: true });
+        // Gọi API refresh token sử dụng instance api để thừa hưởng baseURL và config
+        await api.post('/auth/refresh');
         
         isRefreshing = false;
         processQueue(null);
 
+        // Retry chính request bị lỗi ban đầu
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
         processQueue(refreshError);
 
-        // Chuyển hướng về login nếu refresh thất bại và chưa ở trang login
+        // Dọn dẹp localStorage để đồng bộ trạng thái logout ở FE
+        localStorage.removeItem('user');
+        localStorage.clear();
+
+        // Chuyển hướng về login nếu refresh thất bại
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

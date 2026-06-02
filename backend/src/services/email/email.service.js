@@ -1,4 +1,4 @@
-const NodemailerStrategy = require('./email/nodemailer.strategy');
+const NodemailerStrategy = require('./nodemailer.strategy');
 
 class EmailService {
   constructor(strategy = new NodemailerStrategy()) {

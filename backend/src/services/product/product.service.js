@@ -1,6 +1,6 @@
-const productRepository = require('../repositories/product.repository');
-const priceService = require('./price.service');
-const { generateSlug } = require('../utils/utils');
+const productRepository = require('../../repositories/product.repository');
+const priceService = require('../promotion/price.service');
+const { generateSlug } = require('../../utils/utils');
 
 class ProductService {
   async getHomePageData() {
@@ -47,7 +47,7 @@ class ProductService {
     ]);
 
     // Tìm các chương trình khuyến mãi mua kèm áp dụng cho sản phẩm chính này
-    const Promotion = require('../models/Promotion');
+    const Promotion = require('../../models/Promotion');
     const now = new Date();
     const activeAddOnPromotions = await Promotion.find({
       isActive: true,
@@ -90,8 +90,19 @@ class ProductService {
       };
     }));
 
+    // Find if there is a reward rule for the main product
+    const ProductRewardRule = require('../../models/ProductRewardRule');
+    const rewardRule = await ProductRewardRule.findOne({ productId: product._id, isActive: true });
+    
+    // Ensure product is an object and assign rewardPoints
+    const productWithReward = typeof productWithPrice.toObject === 'function' 
+      ? productWithPrice.toObject() 
+      : JSON.parse(JSON.stringify(productWithPrice));
+      
+    productWithReward.rewardPoints = rewardRule ? rewardRule.rewardPoints : 0;
+
     return {
-      product: productWithPrice,
+      product: productWithReward,
       similarProducts: similarProductsWithPrice,
       addOnPromotions: addOnPromotionsWithPrices
     };
@@ -111,7 +122,7 @@ class ProductService {
       productRest.slug = generateSlug(productRest.name);
     }
     const product = await productRepository.create(productRest);
-    const inventoryRepository = require('../repositories/inventory.repository');
+    const inventoryRepository = require('../../repositories/inventory.repository');
     await inventoryRepository.updateStock(product._id, stock !== undefined ? stock : 0);
     return product;
   }
@@ -123,7 +134,7 @@ class ProductService {
     }
     const product = await productRepository.update(id, productRest);
     if (stock !== undefined && product) {
-      const inventoryRepository = require('../repositories/inventory.repository');
+      const inventoryRepository = require('../../repositories/inventory.repository');
       await inventoryRepository.updateStock(product._id, stock);
     }
     return product;
@@ -132,7 +143,7 @@ class ProductService {
   async deleteProduct(id) {
     const product = await productRepository.delete(id);
     if (product) {
-      const Inventory = require('../models/Inventory');
+      const Inventory = require('../../models/Inventory');
       await Inventory.deleteOne({ productId: product._id });
     }
     return product;

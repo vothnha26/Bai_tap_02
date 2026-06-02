@@ -4,7 +4,7 @@ process.env.USE_MEMORY_REDIS = 'true';
 
 const mongoose = require('mongoose');
 const User = require('../models/User');
-const authService = require('../services/auth.service');
+const authService = require('../services/auth/auth.service');
 const redisClient = require('../config/redis');
 
 describe('Auth Service', () => {

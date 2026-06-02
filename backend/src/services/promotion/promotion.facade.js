@@ -1,6 +1,6 @@
 const { PROMOTION_MATCH_TYPES, PROMOTION_USER_GROUPS } = require('../../utils/constants');
 const PromotionStrategyFactory = require('./promotion.factory');
-const priceService = require('../price.service');
+const priceService = require('./price.service');
 const mongoose = require('mongoose');
 
 class PromotionCalculatorFacade {

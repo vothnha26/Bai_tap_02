@@ -1,9 +1,9 @@
-const orderRepository = require('../repositories/order.repository');
-const cartService = require('./cart.service');
-const productRepository = require('../repositories/product.repository');
-const { ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } = require('../utils/constants');
-const { OrderStateFactory } = require('./order/order.states');
-const { OrderChainFactory } = require('./order/order.chain.factory');
+const orderRepository = require('../../repositories/order.repository');
+const cartService = require('../cart/cart.service');
+const productRepository = require('../../repositories/product.repository');
+const { ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } = require('../../utils/constants');
+const { OrderStateFactory } = require('./order.states');
+const { OrderChainFactory } = require('./order.chain.factory');
 
 class OrderService {
   async createOrder(userId, orderInfo) {

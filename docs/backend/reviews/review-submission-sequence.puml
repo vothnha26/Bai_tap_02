@@ -1,0 +1,58 @@
+@startuml
+autonumber
+actor User
+participant "ReviewController" as Controller
+participant "ReviewService" as Service
+database "Review DB" as DB
+participant "BullMQ (ReviewQueue)" as Queue
+participant "ReviewWorker" as Worker
+participant "ContentModerator" as AI
+
+User -> Controller: Submit Review (productId, rating, comment)
+activate Controller
+
+Controller -> Service: createReview(userId, productId, data)
+activate Service
+
+Service -> DB: Create Review (status: PENDING)
+activate DB
+DB --> Service: Return Review Object
+deactivate DB
+
+Service -> Queue: Add Job "review.submitted" (reviewId)
+activate Queue
+Queue --> Service: Job Added
+deactivate Queue
+
+Service --> Controller: Return Success (Review PENDING)
+deactivate Service
+
+Controller --> User: Response "Review submitted, pending moderation"
+deactivate Controller
+
+note over Worker: Background Processing
+
+Worker -> Queue: Pull Job "review.submitted"
+activate Worker
+Worker -> DB: Get Review details
+activate DB
+DB --> Worker: Review Data
+deactivate DB
+
+Worker -> AI: Moderate Content (comment)
+activate AI
+AI --> Worker: Result (status: APPROVED/REJECTED)
+deactivate AI
+
+Worker -> DB: Update Review Status
+activate DB
+DB --> Worker: Updated
+deactivate DB
+
+alt status == APPROVED
+    Worker -> Queue: Add Job "review.approved" (reviewId, userId)
+end
+
+Worker --> Queue: Job Completed
+deactivate Worker
+@enduml

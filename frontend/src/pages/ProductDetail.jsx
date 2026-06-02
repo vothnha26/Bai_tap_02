@@ -5,7 +5,7 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { productApi } from '../services/product.service';
 import { useCart } from '../context/CartContext';
-import { Star, Minus, Plus, ShoppingCart, Heart, Share2, Package, TrendingUp, Loader2, ChevronRight } from 'lucide-react';
+import { Star, Minus, Plus, ShoppingCart, Heart, Share2, Package, TrendingUp, Loader2, ChevronRight, Coins } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export default function ProductDetail() {
@@ -237,6 +237,20 @@ export default function ProductDetail() {
                     )}
                   </div>
                 </div>
+
+                {product.rewardPoints > 0 && (
+                  <div className="flex items-center gap-3 mb-6 px-5 py-3.5 bg-gradient-to-r from-emerald-50 to-teal-50/30 text-emerald-800 rounded-2xl border border-emerald-100/50 shadow-sm w-fit">
+                    <div className="p-2 bg-emerald-500 rounded-xl text-white shadow-sm shadow-emerald-100 animate-bounce">
+                      <Coins className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">Ưu đãi điểm thưởng</span>
+                      <span className="text-sm font-semibold text-gray-700">
+                        Mua sản phẩm này nhận ngay <strong className="text-lg font-black text-emerald-600">+{product.rewardPoints}</strong> điểm thưởng!
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-6 mb-8">
                   <div className="flex items-center justify-between py-3 border-b border-gray-50">

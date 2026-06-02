@@ -2,7 +2,7 @@ const OrderHandler = require('./OrderHandler');
 const Promotion = require('../../../models/Promotion');
 const productRepository = require('../../../repositories/product.repository');
 const promotionCalculatorFacade = require('../../promotion/promotion.facade');
-const priceService = require('../../price.service');
+const priceService = require('../../promotion/price.service');
 
 class PromotionHandler extends OrderHandler {
   async handle(context) {

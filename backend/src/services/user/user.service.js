@@ -1,4 +1,4 @@
-const userRepository = require('../repositories/user.repository');
+const userRepository = require('../../repositories/user.repository');
 
 class UserService {
   async getProfile(userId) {

@@ -1,4 +1,4 @@
-const statisticsService = require('../services/statistics.service');
+const statisticsService = require('../services/statistics/statistics.service');
 
 class StatisticsController {
   async getAdminStats(req, res) {

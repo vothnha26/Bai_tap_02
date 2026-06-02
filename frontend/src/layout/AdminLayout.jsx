@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
-import { Package, LayoutDashboard, LogOut, ShoppingBag, TrendingUp, Percent, Warehouse } from 'lucide-react';
+import { Package, LayoutDashboard, LogOut, ShoppingBag, TrendingUp, Percent, Warehouse, Trophy } from 'lucide-react';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -59,6 +59,12 @@ export default function AdminLayout() {
       label: 'Kho hàng',
       icon: Warehouse,
       isActive: (pathname) => pathname.startsWith('/admin/inventory')
+    },
+    {
+      path: '/admin/rewards',
+      label: 'Điểm thưởng',
+      icon: Trophy,
+      isActive: (pathname) => pathname.startsWith('/admin/rewards')
     }
   ];
 

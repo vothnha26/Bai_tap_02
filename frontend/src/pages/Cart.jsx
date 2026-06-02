@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router';
-import { Trash2, Plus, Minus, ShoppingCart, ArrowLeft, ChevronRight, Package, CreditCard, ShieldCheck } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, ArrowLeft, ChevronRight, Package, CreditCard, ShieldCheck, Coins } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const Cart = () => {
@@ -83,7 +83,15 @@ const Cart = () => {
               <div className="flex-1 min-w-0 w-full text-center sm:text-left space-y-4">
                 <div>
                   <h3 className="text-xl md:text-2xl font-black text-foreground tracking-tight line-clamp-1 group-hover:text-primary transition-colors cursor-pointer">{item.name}</h3>
-                  <p className="text-primary font-black text-lg mt-1 tracking-tight">{item.price.toLocaleString()}đ</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                    <span className="text-primary font-black text-lg tracking-tight">{item.price.toLocaleString()}đ</span>
+                    {item.rewardPoints > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50 w-fit self-center sm:self-auto">
+                        <Coins className="w-3.5 h-3.5" />
+                        +{item.rewardPoints} pts / sp
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6">
@@ -145,6 +153,16 @@ const Cart = () => {
                 <span className="text-muted-foreground font-bold text-sm uppercase tracking-widest">Vận chuyển</span>
                 <span className="text-green-600 font-black text-sm uppercase tracking-widest bg-green-500/10 px-3 py-1 rounded-lg italic">Miễn phí</span>
               </div>
+              
+              {cart.totalRewardPoints > 0 && (
+                <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-4 rounded-2xl">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-emerald-600 animate-pulse" />
+                    Điểm tích lũy dự kiến
+                  </span>
+                  <span className="text-emerald-800 dark:text-emerald-300 font-black text-lg">+{cart.totalRewardPoints} pts</span>
+                </div>
+              )}
               
               <div className="pt-6 border-t border-border flex flex-col gap-2">
                 <div className="flex justify-between items-end">

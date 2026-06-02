@@ -1,4 +1,4 @@
-const promotionService = require('../services/promotion.service');
+const promotionService = require('../services/promotion/promotion.service');
 
 class PromotionController {
   // Admin APIs

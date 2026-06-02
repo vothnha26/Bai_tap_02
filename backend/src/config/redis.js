@@ -103,7 +103,9 @@ const createMemoryRedisClient = () => {
     flushDb: async () => {
       store.clear();
       return 'OK';
-    }
+    },
+    quit: async () => {},
+    disconnect: async () => {}
   };
 };
 

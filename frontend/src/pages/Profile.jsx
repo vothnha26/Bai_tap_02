@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { User, Package, MapPin, Phone, Mail, Camera, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertTriangle, CreditCard, X, ShieldCheck, LogOut } from "lucide-react";
+import { User, Package, MapPin, Phone, Mail, Camera, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertTriangle, CreditCard, X, ShieldCheck, LogOut, Trophy, History, Star, Zap } from "lucide-react";
 import { getProfile, updateProfile } from "../services/user.service";
 import orderService from "../services/order.service";
 import { Button } from "../components/ui/button";
+import TierProgressBar from "./Profile/TierProgressBar";
+import RewardHistory from "./Profile/RewardHistory";
+import rewardService from "../services/reward.service";
 
 import { ORDER_STATUS, USER_ROLES } from "../utils/constants";
 
@@ -116,9 +119,17 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [membership, setMembership] = useState({
+    rollingPoints: 0,
+    currentPoints: 0,
+    tierId: null,
+  });
+  const [tiers, setTiers] = useState([]);
+  const [rewardLogs, setRewardLogs] = useState([]);
 
   useEffect(() => {
     fetchProfile();
+    fetchMembershipAndRewards();
   }, []);
 
   useEffect(() => {
@@ -145,6 +156,21 @@ const Profile = () => {
       setMessage({ type: "error", text: "Không thể tải thông tin người dùng." });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMembershipAndRewards = async () => {
+    try {
+      const [membershipData, tiersData, logsData] = await Promise.all([
+        rewardService.getMyMembership(),
+        rewardService.getAllTiers(),
+        rewardService.getMyRewardLogs()
+      ]);
+      setMembership(membershipData || { rollingPoints: 0, currentPoints: 0, tierId: null });
+      setTiers(Array.isArray(tiersData) ? tiersData : []);
+      setRewardLogs(Array.isArray(logsData) ? logsData : []);
+    } catch (error) {
+      console.error("Error fetching membership or rewards:", error);
     }
   };
 
@@ -280,6 +306,37 @@ const Profile = () => {
                 <ChevronRight className={`ml-auto w-4 h-4 ${activeTab === "orders" ? "opacity-100" : "opacity-0"}`} />
               </button>
 
+              <button
+                onClick={() => setActiveTab("rewards")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  activeTab === "rewards" 
+                    ? "bg-primary text-primary-foreground font-bold shadow-md" 
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                <Trophy className="w-5 h-5" />
+                <span>Ưu đãi & Hạng</span>
+                {membership?.tierId && (
+                  <span className="ml-auto px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-black rounded-lg">
+                    {membership.tierId.code}
+                  </span>
+                )}
+                <ChevronRight className={`ml-auto w-4 h-4 ${activeTab === "rewards" ? "opacity-100" : "opacity-0"} ${membership?.tierId ? 'hidden' : ''}`} />
+              </button>
+
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  activeTab === "history" 
+                    ? "bg-primary text-primary-foreground font-bold shadow-md" 
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                <History className="w-5 h-5" />
+                <span>Lịch sử ví điểm</span>
+                <ChevronRight className={`ml-auto w-4 h-4 ${activeTab === "history" ? "opacity-100" : "opacity-0"}`} />
+              </button>
+
               <div className="h-px bg-border my-2 mx-4" />
 
               <button
@@ -413,7 +470,7 @@ const Profile = () => {
                 </form>
               </div>
             </div>
-          ) : (
+          ) : activeTab === "orders" ? (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="flex justify-between items-center mb-8">
                 <div>
@@ -531,6 +588,65 @@ const Profile = () => {
                   })}
                 </div>
               )}
+            </div>
+          ) : activeTab === "rewards" ? (
+            <div className="space-y-8">
+              <TierProgressBar 
+                currentPoints={membership.rollingPoints} 
+                tiers={tiers} 
+                currentTier={membership.tierId} 
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-3xl p-8 border border-border shadow-sm">
+                  <h4 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-3">
+                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    Đặc quyền hạng {membership.tierId?.name}
+                  </h4>
+                  <div className="space-y-4">
+                    {membership.tierId?.benefits.map((b, i) => (
+                      <div key={i} className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div className="mt-1">
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">{b.benefitId?.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">{b.benefitId?.description}</p>
+                          <p className="mt-2 text-sm font-black text-blue-600">
+                            Giá trị: {typeof b.value === 'boolean' ? (b.value ? 'Có' : 'Không') : b.value}
+                            {b.benefitId?.valueType === 'PERCENTAGE' ? '%' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-8 text-white shadow-xl flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-lg font-black mb-2 flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                      Mẹo tích điểm nhanh
+                    </h4>
+                    <p className="text-blue-100 text-sm font-medium leading-relaxed">
+                      Mỗi 10,000đ chi tiêu sẽ mang về cho bạn 1 điểm tích lũy. Đặc biệt, hãy thường xuyên đánh giá sản phẩm để nhận ngay 50 điểm/đánh giá thành công!
+                    </p>
+                  </div>
+                  <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Ví điểm khả dụng</p>
+                      <p className="text-3xl font-black tabular-nums">{membership.currentPoints.toLocaleString()}</p>
+                    </div>
+                    <Link to="/search">
+                      <Button variant="secondary" size="sm" className="rounded-xl font-bold bg-white text-blue-700 hover:bg-blue-50">Sắm ngay</Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <RewardHistory logs={rewardLogs} />
             </div>
           )}
         </div>

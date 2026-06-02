@@ -1,0 +1,59 @@
+@startuml
+autonumber
+participant "BullMQ (RewardQueue)" as Queue
+participant "RewardWorker" as Worker
+participant "RewardService" as Service
+database "Membership DB" as DB_Mem
+database "RewardLog DB" as DB_Log
+participant "TierService" as TierService
+database "Tier DB" as DB_Tier
+
+note over Worker: Triggered by "review.approved" event
+
+Worker -> Queue: Pull Job "review.approved"
+activate Worker
+
+Worker -> Service: addReward(userId, sourceId: reviewId, type: "REVIEW")
+activate Service
+
+Service -> DB_Log: Create RewardLog (Idempotency Check)
+activate DB_Log
+note right: Unique index {sourceId, source}
+DB_Log --> Service: Success
+deactivate DB_Log
+
+Service -> DB_Mem: Atomic Update Wallet\n($inc: currentPoints, rollingPoints, pointsByMonth["YYYY-MM"])
+activate DB_Mem
+DB_Mem --> Service: Membership Updated
+deactivate DB_Mem
+
+Service -> TierService: checkAndUpgradeTier(userId)
+activate TierService
+
+TierService -> DB_Mem: Get rollingPoints
+activate DB_Mem
+DB_Mem --> TierService: rollingPoints value
+deactivate DB_Mem
+
+TierService -> DB_Tier: Query next higher Tier requirements
+activate DB_Tier
+DB_Tier --> TierService: Tier Rules
+deactivate DB_Tier
+
+alt rollingPoints >= nextTier.minPoints
+    TierService -> DB_Mem: Update Tier & TierChangedAt
+    activate DB_Mem
+    DB_Mem --> TierService: Updated
+    deactivate DB_Mem
+    
+    TierService -> Queue: Add Job "membership.tier_changed" (userId, newTier)
+end
+
+deactivate TierService
+
+Service --> Worker: Reward Processed
+deactivate Service
+
+Worker --> Queue: Job Completed
+deactivate Worker
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+autonumber
+participant "BullMQ Repeatable Job" as Cron
+participant "TierWorker" as Worker
+participant "MembershipRepository" as Repo
+database "Membership DB" as DB_Mem
+participant "RewardService" as Service
+
+Cron -> Worker: Trigger "tier.monthly_check" (First day of month)
+activate Worker
+
+Worker -> Repo: findUsersToProcess(batchSize: 100)
+activate Repo
+Repo --> Worker: User List
+deactivate Repo
+
+loop for each User
+    Worker -> Service: processMonthlyDowngrade(userId)
+    activate Service
+    
+    Service -> Service: Calculate expired month (T-13)
+    
+    Service -> DB_Mem: Atomic Update:\n1. rollingPoints -= pointsByMonth[expiredMonth]\n2. delete pointsByMonth[expiredMonth]
+    activate DB_Mem
+    DB_Mem --> Service: Success
+    deactivate DB_Mem
+    
+    Service -> Service: Check Tier Downgrade Requirements
+    
+    alt rollingPoints < currentTier.minPoints
+        Service -> DB_Mem: Update Tier (Status: DOWNGRADED)
+        activate DB_Mem
+        DB_Mem --> Service: Updated
+        deactivate DB_Mem
+        
+        Service -> Repo: Publish "membership.tier_changed"\n(reason: TIER_DOWNGRADE_DUE_TO_INACTIVITY)
+    end
+    
+    deactivate Service
+end
+
+Worker --> Cron: Batch Completed
+deactivate Worker
+@enduml

@@ -10,6 +10,8 @@ const orderRoutes = require('./routes/order.routes');
 const userRoutes = require('./routes/user.routes');
 const promotionRoutes = require('./routes/promotion.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
+const reviewRoutes = require('./routes/review.routes');
+const rewardRoutes = require('./routes/reward.routes');
 
 const app = express();
 
@@ -44,6 +46,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/rewards', rewardRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

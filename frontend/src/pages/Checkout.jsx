@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate, Link } from 'react-router';
-import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Gift, Trash } from 'lucide-react';
+import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Gift, Trash, Coins } from 'lucide-react';
 import orderService from '../services/order.service';
 import { promotionApi } from '../services/promotion.service';
 import { Button } from '../components/ui/button';
@@ -340,6 +340,17 @@ const Checkout = () => {
                 <span>Phí vận chuyển</span>
                 <span className="text-green-600 font-black italic">Miễn phí</span>
               </div>
+
+              {cart.totalRewardPoints > 0 && (
+                <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-4 rounded-2xl my-2">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-emerald-600 animate-pulse" />
+                    Điểm thưởng tích lũy
+                  </span>
+                  <span className="text-emerald-800 dark:text-emerald-300 font-black text-sm">+{cart.totalRewardPoints} pts</span>
+                </div>
+              )}
+
               <div className="h-px bg-border my-2" />
               <div className="flex justify-between items-end">
                 <span className="text-muted-foreground text-xs font-black uppercase tracking-widest">Tổng cộng</span>

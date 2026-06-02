@@ -1,5 +1,5 @@
-const productDiscountRepository = require('../repositories/productDiscount.repository');
-const inventoryRepository = require('../repositories/inventory.repository');
+const productDiscountRepository = require('../../repositories/productDiscount.repository');
+const inventoryRepository = require('../../repositories/inventory.repository');
 
 class PriceService {
   /**

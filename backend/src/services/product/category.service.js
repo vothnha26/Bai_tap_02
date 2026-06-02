@@ -1,5 +1,5 @@
-const categoryRepository = require('../repositories/category.repository');
-const { generateSlug } = require('../utils/utils');
+const categoryRepository = require('../../repositories/category.repository');
+const { generateSlug } = require('../../utils/utils');
 
 class CategoryService {
   async getAllCategories() {

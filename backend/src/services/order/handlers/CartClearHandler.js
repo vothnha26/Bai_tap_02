@@ -1,5 +1,5 @@
 const OrderHandler = require('./OrderHandler');
-const cartService = require('../../cart.service');
+const cartService = require('../../cart/cart.service');
 
 class CartClearHandler extends OrderHandler {
   async handle(context) {

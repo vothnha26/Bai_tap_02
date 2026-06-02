@@ -1,4 +1,4 @@
-const authService = require('../services/auth.service');
+const authService = require('../services/auth/auth.service');
 const loginRateLimiter = require('../middlewares/login-rate-limit.middleware');
 const { ERROR_MESSAGES } = require('../utils/constants');
 

@@ -5,7 +5,7 @@ class StockValidationHandler extends OrderHandler {
   async handle(context) {
     const { cart, orderItems } = context;
     
-    const priceService = require('../../price.service');
+    const priceService = require('../../promotion/price.service');
 
     for (const item of cart.items) {
       const product = await productRepository.findById(item.productId);

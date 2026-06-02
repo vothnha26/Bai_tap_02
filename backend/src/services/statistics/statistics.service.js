@@ -1,5 +1,5 @@
-const statisticsRepository = require('../repositories/statistics.repository');
-const redisClient = require('../config/redis');
+const statisticsRepository = require('../../repositories/statistics.repository');
+const redisClient = require('../../config/redis');
 
 class StatisticsService {
   async getAdminStats() {

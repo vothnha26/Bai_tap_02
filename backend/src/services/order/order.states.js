@@ -118,8 +118,41 @@ class ShippingState extends OrderState {
       throw new Error(`Invalid transition from SHIPPING to ${newStatus}`);
     }
 
-    if (newStatus === ORDER_STATUS.DELIVERED && order.paymentMethod === PAYMENT_METHOD.COD) {
-      await orderRepository.updatePaymentStatus(order.id || order._id, PAYMENT_STATUS.PAID);
+    if (newStatus === ORDER_STATUS.DELIVERED) {
+      if (order.paymentMethod === PAYMENT_METHOD.COD) {
+        await orderRepository.updatePaymentStatus(order.id || order._id, PAYMENT_STATUS.PAID);
+      }
+
+      // Xử lý cộng điểm thưởng cho sản phẩm khi đơn hàng giao thành công
+      try {
+        const ProductRewardRule = require('../../models/ProductRewardRule');
+        const rewardQueue = require('../reward/RewardQueue');
+        const { REWARD_SOURCES } = require('../../utils/constants');
+
+        const itemIds = order.items.map(item => item.productId);
+        const rules = await ProductRewardRule.find({ productId: { $in: itemIds }, isActive: true });
+
+        const ruleMap = new Map(rules.map(r => [r.productId.toString(), r.rewardPoints]));
+
+        let totalPoints = 0;
+        for (const item of order.items) {
+          const points = ruleMap.get(item.productId.toString()) || 0;
+          totalPoints += points * item.quantity;
+        }
+
+        if (totalPoints > 0) {
+          const userIdStr = order.userId._id ? order.userId._id.toString() : order.userId.toString();
+          await rewardQueue.add(`reward.order.${order.id || order._id}`, {
+            userId: userIdStr,
+            points: totalPoints,
+            source: REWARD_SOURCES.ORDER,
+            sourceId: order.id || order._id
+          });
+        }
+      } catch (rewardError) {
+        // Ghi nhận lỗi nhưng không chặn luồng giao dịch chính
+        console.error('Lỗi khi tính và đẩy điểm thưởng vào queue cho đơn hàng:', rewardError);
+      }
     }
 
     if (newStatus === ORDER_STATUS.CANCELLED) {
