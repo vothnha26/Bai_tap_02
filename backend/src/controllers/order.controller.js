@@ -48,7 +48,8 @@ class OrderController {
     try {
       const userId = req.user.id;
       const { id } = req.params;
-      const result = await orderService.cancelOrder(id, userId);
+      const { reason } = req.body;
+      const result = await orderService.cancelOrder(id, userId, reason);
       res.status(200).json(result);
     } catch (error) {
       if (error.message === 'Order not found') {
@@ -73,8 +74,8 @@ class OrderController {
   async updateStatus(req, res, next) {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const order = await orderService.updateOrderStatus(id, status);
+      const { status, rejectionReason } = req.body;
+      const order = await orderService.updateOrderStatus(id, status, rejectionReason);
       res.status(200).json(order);
     } catch (error) {
       next(error);

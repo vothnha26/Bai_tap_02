@@ -43,6 +43,8 @@ const ManageOrders = () => {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [rejectOrder, setRejectOrder] = useState(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
 
   const fetchAllOrders = async () => {
     setLoading(true);
@@ -77,6 +79,22 @@ const ManageOrders = () => {
       }
     } catch (error) {
       alert(error.message || 'Lỗi khi cập nhật trạng thái');
+    }
+  };
+
+  const handleRejectCancellation = async () => {
+    if (!rejectionReasonInput.trim()) {
+      alert('Vui lòng nhập lý do từ chối hủy đơn hàng');
+      return;
+    }
+    try {
+      await orderService.updateOrderStatusAdmin(rejectOrder.id, ORDER_STATUS.PROCESSING, rejectionReasonInput);
+      alert('Đã từ chối yêu cầu hủy đơn hàng');
+      setRejectOrder(null);
+      setRejectionReasonInput('');
+      fetchAllOrders();
+    } catch (error) {
+      alert(error.message || 'Lỗi khi từ chối yêu cầu hủy');
     }
   };
 
@@ -228,6 +246,23 @@ const ManageOrders = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    {order.cancellationReason && (
+                      <div className="mt-6 p-5 bg-red-50/50 rounded-2xl border border-red-100/50">
+                        <p className="text-[10px] text-red-500 uppercase font-black tracking-widest mb-1">
+                          Lý do yêu cầu hủy từ khách
+                        </p>
+                        <p className="text-sm font-bold text-red-950">"{order.cancellationReason}"</p>
+                        {order.cancellationRejectionReason && (
+                          <div className="mt-3 pt-3 border-t border-red-200/50">
+                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                              Lý do Shop từ chối hủy
+                            </p>
+                            <p className="text-sm font-bold text-gray-700">"{order.cancellationRejectionReason}"</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-center justify-between gap-6 mt-8">
                       <button 
@@ -240,9 +275,20 @@ const ManageOrders = () => {
 
                       <div className="flex flex-wrap gap-3">
                         {order.status === ORDER_STATUS.CANCELLATION_REQUESTED && (
-                          <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELLED)} className="px-6 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-red-100">
-                            Đồng ý hủy
-                          </button>
+                          <>
+                            <button 
+                              onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELLED)} 
+                              className="px-6 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-red-100"
+                            >
+                              Đồng ý hủy
+                            </button>
+                            <button 
+                              onClick={() => setRejectOrder(order)} 
+                              className="px-6 py-3 bg-gray-800 text-white rounded-2xl hover:bg-gray-900 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-gray-200"
+                            >
+                              Từ chối hủy
+                            </button>
+                          </>
                         )}
                         {order.status === ORDER_STATUS.PENDING && (
                           <button onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CONFIRMED)} className="px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100">
@@ -295,6 +341,23 @@ const ManageOrders = () => {
             <div className="p-8 max-h-[60vh] overflow-y-auto scrollbar-thin">
               {renderTimeline(selectedOrder)}
 
+              {selectedOrder.cancellationReason && (
+                <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-100/50">
+                  <p className="text-[10px] text-red-500 uppercase font-black tracking-widest mb-1">
+                    Lý do yêu cầu hủy từ khách
+                  </p>
+                  <p className="text-sm font-bold text-red-950">"{selectedOrder.cancellationReason}"</p>
+                  {selectedOrder.cancellationRejectionReason && (
+                    <div className="mt-3 pt-3 border-t border-red-200/50">
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                        Lý do Shop từ chối hủy
+                      </p>
+                      <p className="text-sm font-bold text-gray-700">"{selectedOrder.cancellationRejectionReason}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-4">
                    <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Khách hàng</p>
@@ -344,6 +407,43 @@ const ManageOrders = () => {
                <button onClick={() => setSelectedOrder(null)} className="px-8 py-3 bg-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all">
                  Đóng lại
                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Cancellation Reason Modal */}
+      {rejectOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black text-gray-900 mb-2">Từ chối yêu cầu hủy đơn</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Vui lòng nhập lý do từ chối yêu cầu hủy của đơn hàng <span className="font-mono font-bold text-blue-600">#{rejectOrder.id.slice(-8).toUpperCase()}</span>. Đơn hàng sẽ quay về trạng thái <span className="font-bold text-purple-600">Đang chuẩn bị</span> để tiếp tục giao dịch.
+            </p>
+            
+            <textarea
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none h-32"
+              placeholder="Nhập lý do từ chối hủy (ví dụ: Hàng đã đóng gói và bàn giao cho đơn vị vận chuyển)..."
+              value={rejectionReasonInput}
+              onChange={(e) => setRejectionReasonInput(e.target.value)}
+            />
+            
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => {
+                  setRejectOrder(null);
+                  setRejectionReasonInput('');
+                }}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl text-gray-700 text-xs font-black uppercase tracking-widest transition-all"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleRejectCancellation}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200"
+              >
+                Gửi phản hồi
+              </button>
             </div>
           </div>
         </div>

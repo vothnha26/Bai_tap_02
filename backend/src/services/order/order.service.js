@@ -49,24 +49,24 @@ class OrderService {
     return await this._checkAutoConfirm(order);
   }
 
-  async cancelOrder(orderId, userId) {
+  async cancelOrder(orderId, userId, reason) {
     const order = await this.getOrderById(orderId, userId);
     const state = OrderStateFactory.getState(order, this);
-    return await state.cancel(order, userId);
+    return await state.cancel(order, userId, reason);
   }
 
   async getAllOrders() {
     return await orderRepository.findAll();
   }
 
-  async updateOrderStatus(orderId, status) {
+  async updateOrderStatus(orderId, status, rejectionReason = null) {
     const order = await orderRepository.findById(orderId);
     if (!order) {
       throw new Error('Order not found');
     }
 
     const state = OrderStateFactory.getState(order, this);
-    return await state.updateStatus(order, status);
+    return await state.updateStatus(order, status, rejectionReason);
   }
 
   async _checkAutoConfirm(order) {

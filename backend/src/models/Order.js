@@ -73,6 +73,12 @@ const orderSchema = new mongoose.Schema({
   },
   note: {
     type: String,
+  },
+  cancellationReason: {
+    type: String,
+  },
+  cancellationRejectionReason: {
+    type: String,
   }
 }, {
   timestamps: true,

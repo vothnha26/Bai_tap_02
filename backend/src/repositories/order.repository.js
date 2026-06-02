@@ -13,8 +13,15 @@ class OrderRepository {
     return await Order.find({ userId }).sort({ createdAt: -1 });
   }
 
-  async updateStatus(id, status) {
-    return await Order.findByIdAndUpdate(id, { status }, { new: true });
+  async updateStatus(id, status, cancellationReason = null, cancellationRejectionReason = null) {
+    const updateData = { status };
+    if (cancellationReason !== null) {
+      updateData.cancellationReason = cancellationReason;
+    }
+    if (cancellationRejectionReason !== null) {
+      updateData.cancellationRejectionReason = cancellationRejectionReason;
+    }
+    return await Order.findByIdAndUpdate(id, updateData, { new: true });
   }
 
   async updatePaymentStatus(id, paymentStatus) {

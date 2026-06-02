@@ -13,8 +13,8 @@ const orderService = {
     return await apiClient.get(`/orders/${id}`);
   },
 
-  cancelOrder: async (id) => {
-    return await apiClient.post(`/orders/${id}/cancel`);
+  cancelOrder: async (id, reason) => {
+    return await apiClient.post(`/orders/${id}/cancel`, { reason });
   },
 
   // Admin APIs
@@ -22,8 +22,8 @@ const orderService = {
     return await apiClient.get('/orders/admin/all');
   },
 
-  updateOrderStatusAdmin: async (id, status) => {
-    return await apiClient.put(`/orders/admin/${id}/status`, { status });
+  updateOrderStatusAdmin: async (id, status, rejectionReason = null) => {
+    return await apiClient.put(`/orders/admin/${id}/status`, { status, rejectionReason });
   }
 };
 

@@ -8,7 +8,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/seeds/product.seed.js",
     "seed:promotion": "node src/seeds/promotion.seed.js",
-    "test": "jest --detectOpenHandles"
+    "test": "jest --detectOpenHandles --setupFilesAfterEnv ./src/tests/setup.js"
   },
   "keywords": [],
   "author": "",

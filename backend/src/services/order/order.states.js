@@ -1,6 +1,7 @@
 const { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, ERROR_MESSAGES } = require('../../utils/constants');
 const productRepository = require('../../repositories/product.repository');
 const orderRepository = require('../../repositories/order.repository');
+const { orderEventEmitter, ORDER_EVENTS } = require('./order.event');
 
 /**
  * Base Order State
@@ -10,11 +11,11 @@ class OrderState {
     this.orderService = orderService;
   }
 
-  async cancel(order, userId) {
-    throw new Error(`Cannot cancel order in ${order.status} state`);
+  async cancel(order, userId, reason) {
+    throw new Error(ERROR_MESSAGES.ORDER_CANNOT_CANCEL);
   }
 
-  async updateStatus(order, newStatus) {
+  async updateStatus(order, newStatus, rejectionReason = null) {
     throw new Error(`Cannot transition from ${order.status} to ${newStatus}`);
   }
 
@@ -33,22 +34,25 @@ class OrderState {
  * Pending State
  */
 class PendingState extends OrderState {
-  async cancel(order, userId) {
+  async cancel(order, userId, reason) {
     const now = new Date();
     const createdAt = new Date(order.createdAt);
     const diffMins = Math.floor((now - createdAt) / 1000 / 60);
 
     if (diffMins < 30) {
-      const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLED);
+      const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLED, reason);
       await this._returnStock(order);
+      
+      // Emit event
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLED, updatedOrder);
+      
       return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCEL_SUCCESS };
     } else {
-      const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLATION_REQUESTED);
-      return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCELLATION_REQUESTED };
+      throw new Error(ERROR_MESSAGES.ORDER_CANNOT_CANCEL);
     }
   }
 
-  async updateStatus(order, newStatus) {
+  async updateStatus(order, newStatus, rejectionReason = null) {
     const allowed = [ORDER_STATUS.CONFIRMED, ORDER_STATUS.CANCELLED, ORDER_STATUS.PROCESSING];
     if (!allowed.includes(newStatus)) {
       throw new Error(`Invalid transition from PENDING to ${newStatus}`);
@@ -56,9 +60,15 @@ class PendingState extends OrderState {
 
     if (newStatus === ORDER_STATUS.CANCELLED) {
       await this._returnStock(order);
+      // Emit event
+      const updated = await orderRepository.updateStatus(order.id || order._id, newStatus);
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLED, updated);
+      return updated;
     }
 
-    return await orderRepository.updateStatus(order.id || order._id, newStatus);
+    const updated = await orderRepository.updateStatus(order.id || order._id, newStatus, null, rejectionReason);
+    orderEventEmitter.emit(ORDER_EVENTS.ORDER_STATUS_UPDATED, { order: updated, oldStatus: order.status, newStatus });
+    return updated;
   }
 }
 
@@ -66,12 +76,25 @@ class PendingState extends OrderState {
  * Confirmed State
  */
 class ConfirmedState extends OrderState {
-  async cancel(order, userId) {
-    const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLATION_REQUESTED);
-    return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCELLATION_REQUESTED };
+  async cancel(order, userId, reason) {
+    const now = new Date();
+    const createdAt = new Date(order.createdAt);
+    const diffMins = Math.floor((now - createdAt) / 1000 / 60);
+
+    if (diffMins < 30) {
+      const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLED, reason);
+      await this._returnStock(order);
+      
+      // Emit event
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLED, updatedOrder);
+      
+      return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCEL_SUCCESS };
+    } else {
+      throw new Error(ERROR_MESSAGES.ORDER_CANNOT_CANCEL);
+    }
   }
 
-  async updateStatus(order, newStatus) {
+  async updateStatus(order, newStatus, rejectionReason = null) {
     const allowed = [ORDER_STATUS.PROCESSING, ORDER_STATUS.CANCELLED];
     if (!allowed.includes(newStatus)) {
       throw new Error(`Invalid transition from CONFIRMED to ${newStatus}`);
@@ -79,9 +102,19 @@ class ConfirmedState extends OrderState {
 
     if (newStatus === ORDER_STATUS.CANCELLED) {
       await this._returnStock(order);
+      const updated = await orderRepository.updateStatus(order.id || order._id, newStatus);
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLED, updated);
+      return updated;
     }
 
-    return await orderRepository.updateStatus(order.id || order._id, newStatus);
+    const updated = await orderRepository.updateStatus(
+      order.id || order._id, 
+      newStatus, 
+      null, 
+      newStatus === ORDER_STATUS.PROCESSING && order.status === ORDER_STATUS.CANCELLATION_REQUESTED ? rejectionReason : null
+    );
+    orderEventEmitter.emit(ORDER_EVENTS.ORDER_STATUS_UPDATED, { order: updated, oldStatus: order.status, newStatus });
+    return updated;
   }
 }
 
@@ -89,12 +122,24 @@ class ConfirmedState extends OrderState {
  * Processing State
  */
 class ProcessingState extends OrderState {
-  async cancel(order, userId) {
-    const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLATION_REQUESTED);
-    return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCELLATION_REQUESTED };
+  async cancel(order, userId, reason) {
+    const now = new Date();
+    const createdAt = new Date(order.createdAt);
+    const diffMins = Math.floor((now - createdAt) / 1000 / 60);
+
+    if (diffMins < 30) {
+      const updatedOrder = await orderRepository.updateStatus(order.id || order._id, ORDER_STATUS.CANCELLATION_REQUESTED, reason);
+      
+      // Emit event
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLATION_REQUESTED, updatedOrder);
+      
+      return { order: updatedOrder, message: ERROR_MESSAGES.ORDER_CANCELLATION_REQUESTED };
+    } else {
+      throw new Error(ERROR_MESSAGES.ORDER_CANNOT_CANCEL);
+    }
   }
 
-  async updateStatus(order, newStatus) {
+  async updateStatus(order, newStatus, rejectionReason = null) {
     const allowed = [ORDER_STATUS.SHIPPING, ORDER_STATUS.CANCELLED];
     if (!allowed.includes(newStatus)) {
       throw new Error(`Invalid transition from PROCESSING to ${newStatus}`);
@@ -102,9 +147,14 @@ class ProcessingState extends OrderState {
 
     if (newStatus === ORDER_STATUS.CANCELLED) {
       await this._returnStock(order);
+      const updated = await orderRepository.updateStatus(order.id || order._id, newStatus);
+      orderEventEmitter.emit(ORDER_EVENTS.ORDER_CANCELLED, updated);
+      return updated;
     }
 
-    return await orderRepository.updateStatus(order.id || order._id, newStatus);
+    const updated = await orderRepository.updateStatus(order.id || order._id, newStatus, null, rejectionReason);
+    orderEventEmitter.emit(ORDER_EVENTS.ORDER_STATUS_UPDATED, { order: updated, oldStatus: order.status, newStatus });
+    return updated;
   }
 }
 
@@ -112,7 +162,7 @@ class ProcessingState extends OrderState {
  * Shipping State
  */
 class ShippingState extends OrderState {
-  async updateStatus(order, newStatus) {
+  async updateStatus(order, newStatus, rejectionReason = null) {
     const allowed = [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED];
     if (!allowed.includes(newStatus)) {
       throw new Error(`Invalid transition from SHIPPING to ${newStatus}`);
