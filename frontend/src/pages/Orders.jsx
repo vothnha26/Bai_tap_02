@@ -4,6 +4,7 @@ import { Package, Clock, Truck, CheckCircle, XCircle, AlertTriangle, CreditCard,
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { ORDER_STATUS } from '../utils/constants';
+import { formatAddress } from '../utils/utils';
 
 const statusConfig = {
   PENDING: { label: 'Đơn hàng mới', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: Clock },
@@ -249,7 +250,9 @@ const OrderDetailModal = ({ order, onClose }) => {
                 </div>
                 <div className="flex gap-4">
                   <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{order.shippingAddress}</span>
+                  <span className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                    {formatAddress(order.shippingAddress)}
+                  </span>
                 </div>
               </div>
             </div>

@@ -1,6 +1,7 @@
 const authService = require('../services/auth/auth.service');
 const loginRateLimiter = require('../middlewares/login-rate-limit.middleware');
 const { ERROR_MESSAGES } = require('../utils/constants');
+const logger = require('../utils/logger');
 
 class AuthController {
   async register(req, res) {
@@ -29,16 +30,16 @@ class AuthController {
 
         res.cookie('accessToken', result.accessToken, {
           httpOnly: true,
-          secure: false, // Localhost không cần secure
-          sameSite: 'lax', // Dùng lax để trình duyệt gửi cookie khi chuyển origin trong dev
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           maxAge: accessTokenMaxAge,
           path: '/'
         });
 
         res.cookie('refreshToken', result.refreshToken, {
           httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           maxAge: refreshTokenMaxAge,
           path: '/'
         });
@@ -105,16 +106,16 @@ class AuthController {
 
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: false, // Localhost không dùng https
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: accessTokenMaxAge,
         path: '/'
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: refreshTokenMaxAge,
         path: '/'
       });
@@ -137,6 +138,7 @@ class AuthController {
     try {
       const refreshToken = req.cookies?.refreshToken;
       if (!refreshToken) {
+        logger.warn('[Auth] Refresh token missing from cookies');
         return res.status(401).json({ message: 'Refresh token required' });
       }
 
@@ -156,16 +158,16 @@ class AuthController {
 
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: accessTokenMaxAge,
         path: '/'
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: refreshTokenMaxAge,
         path: '/'
       });

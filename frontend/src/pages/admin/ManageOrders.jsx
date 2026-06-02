@@ -16,6 +16,7 @@ import {
   Percent
 } from 'lucide-react';
 import { Link } from 'react-router';
+import { formatAddress } from '../../utils/utils';
 
 const ORDER_STATUS = {
   PENDING: 'PENDING',
@@ -225,7 +226,7 @@ const ManageOrders = () => {
                       <div>
                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-3">Giao hàng đến</p>
                         <p className="text-sm font-bold text-gray-900">{order.phone}</p>
-                        <p className="text-sm text-gray-500 mt-1 italic">"{order.shippingAddress}"</p>
+                        <p className="text-sm text-gray-500 mt-1 italic">"{formatAddress(order.shippingAddress)}"</p>
                       </div>
                       <div className="md:col-span-2">
                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-3">Sản phẩm ({order.items?.length || 0})</p>
@@ -364,7 +365,7 @@ const ManageOrders = () => {
                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-sm">
                       <p className="font-black text-gray-900">{selectedOrder.userId?.fullName}</p>
                       <p className="text-gray-500 mt-1">{selectedOrder.phone}</p>
-                      <p className="text-gray-500 mt-2 italic">"{selectedOrder.shippingAddress}"</p>
+                      <p className="text-gray-500 mt-2 italic">"{formatAddress(selectedOrder.shippingAddress)}"</p>
                    </div>
                 </div>
                 <div className="space-y-4">

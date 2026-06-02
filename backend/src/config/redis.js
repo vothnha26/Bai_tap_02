@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { createClient } = require('redis');
 
 const createMemoryRedisClient = () => {
@@ -73,7 +74,6 @@ const createMemoryRedisClient = () => {
       return list.length;
     },
     brPop: async (key, timeout) => {
-      // Basic simulation of brPop for memory store
       const poll = () => {
         const record = getRecord(key);
         if (record && Array.isArray(record.value) && record.value.length > 0) {
@@ -110,7 +110,10 @@ const createMemoryRedisClient = () => {
 };
 
 if (process.env.USE_MEMORY_REDIS === 'true') {
-  console.warn('Using in-memory Redis fallback. Do not use this in production.');
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('In-memory Redis fallback is NOT allowed in production. Provide a real Redis instance.');
+  }
+  logger.warn('Using in-memory Redis fallback. Data will be lost on restart and inconsistency occurs with multi-process. Do not use this in production.');
   module.exports = createMemoryRedisClient();
 } else {
   const redisClient = createClient({
@@ -119,7 +122,7 @@ if (process.env.USE_MEMORY_REDIS === 'true') {
 
   redisClient.on('error', (err) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.error('Redis Client Error', err);
+      logger.error('Redis Client Error', err);
     }
   });
 
@@ -127,9 +130,9 @@ if (process.env.USE_MEMORY_REDIS === 'true') {
     if (process.env.NODE_ENV !== 'test' && !redisClient.isOpen) {
       try {
         await redisClient.connect();
-        console.log('Connected to Redis');
+        logger.info('Connected to Redis');
       } catch (err) {
-        console.error('Could not connect to Redis', err);
+        logger.error('Could not connect to Redis', err);
       }
     }
   };

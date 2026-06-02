@@ -12,22 +12,24 @@ const promotionRoutes = require('./routes/promotion.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
 const reviewRoutes = require('./routes/review.routes');
 const rewardRoutes = require('./routes/reward.routes');
+const logger = require('./utils/logger');
 
 const app = express();
 
 // Start Email Worker in the same process for In-Memory Redis support
 if (process.env.NODE_ENV !== 'test') {
-  console.log('[System] Starting integrated Email Worker...');
+  logger.info('[System] Starting integrated Email Worker...');
   require('./worker');
 }
 
-// Simple Request Logger
+// Request Logger using Winston
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.url}`);
   next();
 });
 
 // Standard Middlewares
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -61,7 +63,11 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  if (err.stack) {
+    logger.error(err.stack);
+  }
+  
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err : {}

@@ -8,6 +8,20 @@ class OrderSaveHandler extends OrderHandler {
     const { userId, orderInfo, orderItems, cart, finalAmount, discountAmount, giftItems, promotionCode, promotionInstance } = context;
     const { shippingAddress, phone, note, paymentMethod = PAYMENT_METHOD.COD } = orderInfo;
 
+    // Chuẩn hóa địa chỉ để tương thích ngược với các client/test cũ gửi dạng String
+    let addressObject;
+    if (typeof shippingAddress === 'string') {
+      addressObject = {
+        province: 'N/A',
+        district: 'N/A',
+        ward: 'N/A',
+        street: shippingAddress,
+        coordinates: { lat: 0, lng: 0 }
+      };
+    } else {
+      addressObject = shippingAddress;
+    }
+
     const orderData = {
       userId,
       items: orderItems,
@@ -16,7 +30,7 @@ class OrderSaveHandler extends OrderHandler {
       giftItems: giftItems || [],
       promotionCode: promotionCode || undefined,
       finalAmount: finalAmount,
-      shippingAddress,
+      shippingAddress: addressObject,
       phone,
       note,
       paymentMethod,

@@ -1,12 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
+
 
 // Biến để tránh gọi refresh nhiều lần cùng lúc
 let isRefreshing = false;
@@ -35,8 +36,12 @@ api.interceptors.response.use(
     // Nếu lỗi 401 và chưa thử lại lần nào
     if (error.response?.status === 401 && !originalRequest._retry) {
       
-      // Nếu là request login hoặc verify-otp bị lỗi 401 thì không refresh
-      if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/verify-otp')) {
+      // Nếu là request login, verify-otp hoặc CHÍNH request refresh bị lỗi 401 thì không thử lại nữa
+      if (
+        originalRequest.url.includes('/auth/login') || 
+        originalRequest.url.includes('/auth/verify-otp') ||
+        originalRequest.url.includes('/auth/refresh')
+      ) {
         return Promise.reject(error);
       }
 

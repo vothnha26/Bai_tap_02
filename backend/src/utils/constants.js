@@ -68,7 +68,11 @@ const ERROR_MESSAGES = {
   ORDER_CANCELLATION_REQUESTED: 'Đã gửi yêu cầu hủy đơn hàng cho Shop',
   ORDER_NOT_FOUND: 'Order not found',
   ORDER_UNAUTHORIZED: 'Unauthorized access to order',
-  ORDER_CANNOT_CANCEL: 'Đơn hàng đang giao hoặc đã giao, không thể hủy'
+  ORDER_CANNOT_CANCEL: 'Đơn hàng đang giao hoặc đã giao, không thể hủy',
+  // Address messages
+  ADDRESS_NOT_FOUND: 'Address not found',
+  ADDRESS_REQUIRED: 'Address information is required',
+  INVALID_ADDRESS_DATA: 'Invalid address data'
 };
 
 const JWT_CONFIG = {

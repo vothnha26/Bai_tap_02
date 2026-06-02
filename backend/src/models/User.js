@@ -1,5 +1,19 @@
 const mongoose = require('mongoose');
 
+const addressSchema = new mongoose.Schema({
+  street: { type: String, required: true },
+  province: { type: String, required: true },
+  provinceCode: { type: String, required: true },
+  ward: { type: String, required: true },
+  wardCode: { type: String, required: true },
+  fullText: { type: String, required: true },
+  isDefault: { type: Boolean, default: false },
+  coordinates: {
+    lat: { type: Number, default: 10.8231 },
+    lng: { type: Number, default: 106.6297 }
+  }
+});
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -22,9 +36,14 @@ const userSchema = new mongoose.Schema({
     trim: true,
   },
   address: {
-    type: String,
-    trim: true,
+    type: mongoose.Schema.Types.Mixed, // Hỗ trợ cả String (cũ) và Object (mới)
+    default: '',
   },
+  addresses: {
+    type: [addressSchema],
+    default: []
+  },
+
   role: {
     type: String,
     enum: ['USER', 'ADMIN'],

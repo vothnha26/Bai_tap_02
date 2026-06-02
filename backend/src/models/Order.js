@@ -49,8 +49,14 @@ const orderSchema = new mongoose.Schema({
     required: true,
   },
   shippingAddress: {
-    type: String,
-    required: true,
+    province: { type: String, required: true },
+    district: { type: String, default: '' },
+    ward: { type: String, required: true },
+    street: { type: String, required: true },
+    coordinates: {
+      lat: { type: Number, default: 0 },
+      lng: { type: Number, default: 0 }
+    }
   },
   phone: {
     type: String,

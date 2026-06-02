@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router';
 import orderService from '../services/order.service';
 import { CheckCircle, Package, Truck, CreditCard, AlertTriangle, XCircle } from 'lucide-react';
 import { ORDER_STATUS } from '../utils/constants';
+import { formatAddress } from '../utils/utils';
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
@@ -110,7 +111,7 @@ const OrderSuccess = () => {
           </h3>
           <div className="space-y-2 text-sm">
             <p className="text-gray-400">Số điện thoại: <span className="text-white">{order.phone}</span></p>
-            <p className="text-gray-400">Địa chỉ: <span className="text-white">{order.shippingAddress}</span></p>
+            <p className="text-gray-400">Địa chỉ: <span className="text-white">{formatAddress(order.shippingAddress)}</span></p>
           </div>
         </div>
 

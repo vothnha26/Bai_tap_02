@@ -42,7 +42,14 @@ Tài liệu này lưu trữ tóm tắt về kiến trúc, các kỹ thuật sử
 - **SOLID:** Tuân thủ tuyệt đối, đặc biệt là SRP và OCP.
 - **Design Patterns:** Ưu tiên áp dụng (Strategy, Factory, Facade, CoR, Observer) khi xử lý logic rẽ nhánh.
 - **No Magic String:** Tất cả hằng số định nghĩa tại `backend/src/utils/constants.js`.
+- **Logging:** KHÔNG sử dụng `console.log/error`. Bắt buộc dùng `utils/logger.js` (Winston). Mọi sự kiện Login (thành công/thất bại), Reset Password, Token Refresh PHẢI được ghi log để phục vụ audit.
+- **Security:** 
+  - Tuyệt đối không hardcode secrets. Sử dụng `process.env`.
+  - Chính sách mật khẩu: Tối thiểu 12 ký tự, đủ 4 loại ký tự (Hoa, Thường, Số, Đặc biệt).
+  - Password Hashing: Sử dụng `bcrypt` với ít nhất **12 rounds**.
+  - Cookies: Phải có `httpOnly`, `secure` (production), và `sameSite: strict` (production).
 - **Quy trình:** Sequence Diagram -> Implementation -> Automated Testing (Jest/Supertest cho BE, Selenium cho UI).
+
 
 ## 🚀 Lệnh hữu ích
 - `npm run dev`: Chạy server dev (nodemon).

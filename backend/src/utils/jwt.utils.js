@@ -5,8 +5,19 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const REFRESH_TOKEN_REDIS_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev_access_secret_key';
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_key';
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!ACCESS_SECRET || !REFRESH_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT secrets are not defined in environment variables');
+  }
+  // No warning here as it might be noisy in development if handled by other scripts,
+  // but production MUST have them.
+}
+
+const FINAL_ACCESS_SECRET = ACCESS_SECRET || 'dev_access_secret_key_fallback';
+const FINAL_REFRESH_SECRET = REFRESH_SECRET || 'dev_refresh_secret_key_fallback';
 
 class JWTUtils {
   /**
@@ -15,7 +26,7 @@ class JWTUtils {
    * @returns {string} JWT token
    */
   generateAccessToken(payload) {
-    return jwt.sign(payload, ACCESS_SECRET, {
+    return jwt.sign(payload, FINAL_ACCESS_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY
     });
   }
@@ -26,7 +37,7 @@ class JWTUtils {
    * @returns {string} JWT token
    */
   generateRefreshToken(payload) {
-    return jwt.sign(payload, REFRESH_SECRET, {
+    return jwt.sign(payload, FINAL_REFRESH_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRY
     });
   }
@@ -47,7 +58,7 @@ class JWTUtils {
    */
   verifyAccessToken(token) {
     try {
-      return jwt.verify(token, ACCESS_SECRET);
+      return jwt.verify(token, FINAL_ACCESS_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         throw new Error('Access token expired');
@@ -63,7 +74,7 @@ class JWTUtils {
    */
   verifyRefreshToken(token) {
     try {
-      return jwt.verify(token, REFRESH_SECRET);
+      return jwt.verify(token, FINAL_REFRESH_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         throw new Error('Refresh token expired');
@@ -71,6 +82,7 @@ class JWTUtils {
       throw new Error('Invalid refresh token');
     }
   }
+
 
   /**
    * Get token expiry time in milliseconds

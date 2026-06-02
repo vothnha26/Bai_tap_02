@@ -272,7 +272,11 @@ describe('Reward System Integration', () => {
       totalAmount: 400,
       discountAmount: 0,
       finalAmount: 400,
-      shippingAddress: '123 Test St',
+      shippingAddress: {
+        province: 'Test Province',
+        ward: 'Test Ward',
+        street: '123 Test St'
+      },
       phone: '123456789',
       paymentMethod: 'COD',
       status: 'SHIPPING',

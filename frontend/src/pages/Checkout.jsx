@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate, Link } from 'react-router';
 import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Gift, Trash, Coins } from 'lucide-react';
@@ -6,6 +6,10 @@ import orderService from '../services/order.service';
 import { promotionApi } from '../services/promotion.service';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
+import { getAddresses } from '../services/user.service';
+import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const Checkout = () => {
   const { cart, loading: cartLoading, clearCart, itemCount } = useCart();
@@ -13,12 +17,32 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    shippingAddress: '',
     phone: '',
     note: '',
     paymentMethod: 'COD',
     promotionCode: ''
   });
+
+  // State cho multiple addresses
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [isNewAddress, setIsNewAddress] = useState(false);
+
+  // Địa chỉ chi tiết và Bản đồ
+  const [provinces, setProvinces] = useState([]);
+  const [wards, setWards] = useState([]);
+  
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedWard, setSelectedWard] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [coordinates, setCoordinates] = useState({ lat: 10.8231, lng: 106.6297 }); // Mặc định TP.HCM
+
+  // Map state
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [tempCoordinates, setTempCoordinates] = useState(null);
+  const [tempAddress, setTempAddress] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
+  const mapRef = useRef(null);
 
   // Promotion states
   const [promotionCode, setPromotionCode] = useState('');
@@ -27,15 +51,283 @@ const Checkout = () => {
   const [promoError, setPromoError] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
 
+  // Lấy danh sách địa chỉ đã lưu của user
   useEffect(() => {
+    const loadAddresses = async () => {
+      try {
+        const res = await getAddresses();
+        const addrList = res.data?.addresses || res.addresses || res;
+        setAddresses(addrList || []);
+        
+        if (addrList && addrList.length > 0) {
+          // Tìm địa chỉ mặc định
+          const defaultAddr = addrList.find(a => a.isDefault);
+          if (defaultAddr) {
+            setSelectedAddressId(defaultAddr._id);
+          } else {
+            setSelectedAddressId(addrList[0]._id);
+          }
+          setIsNewAddress(false);
+        } else {
+          setIsNewAddress(true);
+        }
+      } catch (err) {
+        console.error('Lỗi tải danh sách địa chỉ:', err);
+        setIsNewAddress(true);
+      }
+    };
+
     if (user) {
       setFormData(prev => ({
         ...prev,
-        phone: user.phone || '',
-        shippingAddress: user.address || ''
+        phone: user.phone || ''
       }));
+      loadAddresses();
     }
   }, [user]);
+
+  // Load danh sách tỉnh
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await axios.get('https://provinces.open-api.vn/api/v2/p/');
+        const data = res.data || [];
+        setProvinces(data);
+        
+        if (user?.address && typeof user.address === 'string' && !selectedProvince) {
+          const parts = user.address.split(',').map(p => p.trim());
+          const provinceName = parts[parts.length - 1];
+          const matched = findBestMatch(provinceName, data, 'province');
+          if (matched) setSelectedProvince(matched.code.toString());
+        }
+      } catch (err) {
+        console.error('Lỗi tải danh sách tỉnh thành:', err);
+      }
+    };
+    fetchProvinces();
+  }, [user]);
+
+  // Load danh sách xã khi tỉnh thay đổi (API v2 loại bỏ cấp Quận/Huyện)
+  useEffect(() => {
+    if (!selectedProvince) {
+      setWards([]);
+      return;
+    }
+    const fetchWards = async () => {
+      try {
+        const res = await axios.get(`https://provinces.open-api.vn/api/v2/p/${selectedProvince}?depth=2`);
+        const data = res.data.wards || [];
+        setWards(data);
+        
+        if (user?.address && typeof user.address === 'string' && !selectedWard) {
+          const parts = user.address.split(',').map(p => p.trim());
+          for (let i = parts.length - 2; i >= 0; i--) {
+            const matched = findBestMatch(parts[i], data, 'ward');
+            if (matched) {
+              setSelectedWard(matched.code.toString());
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi tải danh sách phường xã:', err);
+      }
+    };
+    fetchWards();
+  }, [selectedProvince, user]);
+
+  // Logic map Leaflet
+  useEffect(() => {
+    if (!isMapModalOpen) return;
+    
+    const timer = setTimeout(() => {
+      if (!mapRef.current) return;
+      
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      const currentCoords = tempCoordinates || coordinates;
+      const map = L.map(mapRef.current).setView([currentCoords.lat, currentCoords.lng], 15);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      let marker = L.marker([currentCoords.lat, currentCoords.lng], { draggable: true }).addTo(map);
+
+      map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        handleLocationSelect(lat, lng);
+      });
+
+      marker.on('dragend', (e) => {
+        const { lat, lng } = e.target.getLatLng();
+        handleLocationSelect(lat, lng);
+      });
+      
+      return () => {
+        map.remove();
+      };
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [isMapModalOpen]);
+
+  const handleLocationSelect = async (lat, lng) => {
+    setTempCoordinates({ lat, lng });
+    setGeocoding(true);
+    try {
+      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+        headers: { 'Accept-Language': 'vi' }
+      });
+      if (res.data) {
+        setTempAddress(res.data.display_name);
+      }
+    } catch (err) {
+      console.error('Lỗi định vị địa chỉ:', err);
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const cleanName = (name) => {
+    if (!name) return '';
+    return name.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/^(tinh|thanh pho|quan|huyen|thi xa|thi tran|phuong|xa|duong|district|city|province|ward|county|suburb|quarter|neighbourhood|village|town)\s+/gi, '')
+      .replace(/\s+(tinh|thanh pho|quan|huyen|thi xa|thi tran|phuong|xa|duong|district|city|province|ward|county|suburb|quarter|neighbourhood|village|town)$/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const findBestMatch = (osmName, list, type = 'district') => {
+    if (!osmName || !list || list.length === 0) return null;
+    const cleanOSM = cleanName(osmName);
+    
+    const exactMatch = list.find(item => cleanName(item.name) === cleanOSM);
+    if (exactMatch) return exactMatch;
+    
+    const subMatch = list.find(item => {
+      const cleanItem = cleanName(item.name);
+      return cleanOSM.includes(cleanItem) || cleanItem.includes(cleanOSM);
+    });
+    if (subMatch) return subMatch;
+
+    if (type === 'district' && (cleanOSM.includes('thu duc') || cleanOSM === '2' || cleanOSM === '9')) {
+      return list.find(item => cleanName(item.name).includes('thu duc'));
+    }
+
+    return null;
+  };
+
+  const confirmMapSelection = async () => {
+    if (!tempCoordinates) return;
+    
+    setCoordinates(tempCoordinates);
+    setIsMapModalOpen(false);
+
+    try {
+      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempCoordinates.lat}&lon=${tempCoordinates.lng}&zoom=18&addressdetails=1`, {
+        headers: { 'Accept-Language': 'vi' }
+      });
+      
+      if (res.data && res.data.address) {
+        const addr = res.data.address;
+        const displayName = res.data.display_name || '';
+        
+        // 1. Match Tỉnh/Thành phố
+        const osmProvince = addr.city || addr.state || addr.province || addr.city_district || '';
+        let matchedProv = findBestMatch(osmProvince, provinces, 'province');
+        
+        if (!matchedProv) {
+          const parts = displayName.split(',').map(p => p.trim());
+          for (const part of parts.slice(-3)) {
+            matchedProv = findBestMatch(part, provinces, 'province');
+            if (matchedProv) break;
+          }
+        }
+        
+        if (matchedProv) {
+          const provCode = matchedProv.code.toString();
+          setSelectedProvince(provCode);
+          
+          const wardRes = await axios.get(`https://provinces.open-api.vn/api/v2/p/${provCode}?depth=2`);
+          const tempWards = wardRes.data.wards || [];
+          setWards(tempWards);
+          
+          // 2. Match Phường/Xã
+          const osmWardCandidates = [addr.ward, addr.quarter, addr.suburb, addr.village, addr.town, addr.neighbourhood];
+          let matchedWard = null;
+          
+          for (const candidate of osmWardCandidates) {
+            if (!candidate) continue;
+            matchedWard = findBestMatch(candidate, tempWards, 'ward');
+            if (matchedWard) break;
+          }
+          
+          if (!matchedWard) {
+            const parts = displayName.split(',').map(p => p.trim());
+            for (const part of parts.slice(0, 4)) {
+              matchedWard = findBestMatch(part, tempWards, 'ward');
+              if (matchedWard) break;
+            }
+          }
+          
+          if (matchedWard) {
+            setSelectedWard(matchedWard.code.toString());
+          }
+        }
+        
+        const streetParts = [];
+        if (addr.house_number) streetParts.push(addr.house_number);
+        if (addr.road) streetParts.push(addr.road);
+        
+        if (streetParts.length > 0) {
+          setStreetAddress(streetParts.join(' '));
+        } else {
+          const firstPart = displayName.split(',')[0] || '';
+          const isGeneric = ['phuong', 'quan', 'thanh pho', 'huyen', 'xa'].some(k => firstPart.toLowerCase().includes(k));
+          if (!isGeneric) {
+            setStreetAddress(firstPart);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi phân tích địa chỉ:', err);
+    }
+  };
+
+  const openMapModal = () => {
+    setIsMapModalOpen(true);
+    setTempAddress('Đang xác định vị trí hiện tại...');
+    setGeocoding(true);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const coords = { lat: latitude, lng: longitude };
+          setTempCoordinates(coords);
+          handleLocationSelect(latitude, longitude);
+        },
+        (error) => {
+          console.warn('Không lấy được vị trí GPS, dùng vị trí mặc định:', error);
+          setTempCoordinates(coordinates);
+          handleLocationSelect(coordinates.lat, coordinates.lng);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      setTempCoordinates(coordinates);
+      handleLocationSelect(coordinates.lat, coordinates.lng);
+    }
+  };
 
   useEffect(() => {
     if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
@@ -99,8 +391,45 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    let shippingAddress;
+
+    if (isNewAddress) {
+      if (!selectedProvince || !selectedWard || !streetAddress.trim()) {
+        alert('Vui lòng nhập đầy đủ thông tin địa chỉ nhận hàng (Tỉnh/Thành phố, Phường/Xã và Số nhà/Tên đường).');
+        setLoading(false);
+        return;
+      }
+      shippingAddress = {
+        province: provinces.find(p => p.code.toString() === selectedProvince)?.name || '',
+        district: '',
+        ward: wards.find(w => w.code.toString() === selectedWard)?.name || '',
+        street: streetAddress.trim(),
+        coordinates: coordinates
+      };
+    } else {
+      const selectedAddr = addresses.find(a => a._id === selectedAddressId);
+      if (!selectedAddr) {
+        alert('Vui lòng chọn địa chỉ nhận hàng!');
+        setLoading(false);
+        return;
+      }
+      shippingAddress = {
+        province: selectedAddr.province,
+        district: '',
+        ward: selectedAddr.ward,
+        street: selectedAddr.street,
+        coordinates: selectedAddr.coordinates || { lat: 10.8231, lng: 106.6297 }
+      };
+    }
+
+    const orderPayload = {
+      ...formData,
+      shippingAddress
+    };
+
     try {
-      const order = await orderService.createOrder(formData);
+      const order = await orderService.createOrder(orderPayload);
       await clearCart(); 
       navigate(`/order-success/${order.id}`);
     } catch (error) {
@@ -140,8 +469,8 @@ const Checkout = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-foreground flex items-center gap-2">
+              <div className="space-y-2 flex flex-col">
+                <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   Số điện thoại nhận hàng
                 </label>
@@ -153,37 +482,160 @@ const Checkout = () => {
                   onChange={handleChange}
                   className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                   placeholder="Nhập số điện thoại của bạn"
+                  autoComplete="tel"
                 />
               </div>
 
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  Địa chỉ nhận hàng chi tiết
-                </label>
-                <textarea
-                  name="shippingAddress"
-                  required
-                  rows="3"
-                  value={formData.shippingAddress}
-                  onChange={handleChange}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
-                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                ></textarea>
-                <p className="text-xs text-muted-foreground italic flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Mẹo: Kiểm tra kỹ địa chỉ để shipper giao hàng nhanh nhất
-                </p>
-              </div>
+              {/* Multiple Addresses Selection */}
+              {addresses.length > 0 && (
+                <div className="md:col-span-2 space-y-3">
+                  <label className="text-sm font-bold text-foreground block mb-2">Chọn địa chỉ nhận hàng</label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {addresses.map((addr) => (
+                      <label 
+                        key={addr._id} 
+                        className={`flex items-start p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                          !isNewAddress && selectedAddressId === addr._id 
+                            ? 'border-primary bg-primary/5 shadow-sm' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="mt-1 flex items-center justify-center">
+                          <input
+                            type="radio"
+                            name="checkoutAddress"
+                            checked={!isNewAddress && selectedAddressId === addr._id}
+                            onChange={() => {
+                              setSelectedAddressId(addr._id);
+                              setIsNewAddress(false);
+                            }}
+                            className="w-4 h-4 text-primary focus:ring-primary/20"
+                          />
+                        </div>
+                        <div className="ml-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground text-sm capitalize">{addr.street}</span>
+                            {addr.isDefault && (
+                              <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-black uppercase rounded">
+                                Mặc định
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground text-xs mt-1">{addr.fullText}</p>
+                        </div>
+                      </label>
+                    ))}
 
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-bold text-foreground">Ghi chú (tùy chọn)</label>
+                    <label 
+                      className={`flex items-start p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                        isNewAddress 
+                          ? 'border-primary bg-primary/5 shadow-sm' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="mt-1 flex items-center justify-center">
+                        <input
+                          type="radio"
+                          name="checkoutAddress"
+                          checked={isNewAddress}
+                          onChange={() => setIsNewAddress(true)}
+                          className="w-4 h-4 text-primary focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="ml-3">
+                        <span className="font-bold text-foreground text-sm">Nhập địa chỉ mới</span>
+                        <p className="text-muted-foreground text-xs mt-1">Sử dụng địa chỉ nhận hàng khác chưa được lưu</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {isNewAddress && (
+                <>
+                  {/* Tích hợp ghim bản đồ trực quan */}
+                  <div className="md:col-span-2 flex justify-between items-center bg-primary/5 p-5 rounded-2xl border border-primary/10">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-foreground">Bạn muốn ghim vị trí trên bản đồ?</p>
+                        <p className="text-xs text-muted-foreground font-medium">Tự động điền địa chỉ & định vị tọa độ giao hàng chính xác</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openMapModal}
+                      className="bg-primary hover:bg-primary/95 text-white text-xs font-black px-4 py-3 rounded-xl flex items-center gap-1.5 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    >
+                      🗺️ Ghim bản đồ
+                    </button>
+                  </div>
+
+                  {/* Dropdowns địa chỉ 3 cấp */}
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
+                      Tỉnh / Thành phố <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required={isNewAddress}
+                      value={selectedProvince}
+                      onChange={(e) => {
+                        setSelectedProvince(e.target.value);
+                        setSelectedWard('');
+                      }}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-semibold"
+                    >
+                      <option value="">Chọn Tỉnh / Thành phố</option>
+                      {provinces.map(p => (
+                        <option key={p.code} value={p.code}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
+                      Phường / Xã / Thị trấn <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required={isNewAddress}
+                      disabled={!selectedProvince}
+                      value={selectedWard}
+                      onChange={(e) => setSelectedWard(e.target.value)}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all disabled:opacity-50 text-sm font-semibold"
+                    >
+                      <option value="">Chọn Phường / Xã</option>
+                      {wards.map(w => (
+                        <option key={w.code} value={w.code}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
+                      Số nhà, ngõ, tên đường <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required={isNewAddress}
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-semibold"
+                      placeholder="Ví dụ: Số 97 Man Thiện"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="md:col-span-2 space-y-2 flex flex-col">
+                <label className="text-sm font-bold text-foreground mb-1">Ghi chú (tùy chọn)</label>
                 <input
                   type="text"
                   name="note"
                   value={formData.note}
                   onChange={handleChange}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
                   placeholder="Lời nhắn cho shipper (ví dụ: Giao giờ hành chính)"
                 />
               </div>
@@ -376,6 +828,53 @@ const Checkout = () => {
           </div>
         </div>
       </form>
+
+      {/* Map selection Modal */}
+      {isMapModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-card w-full max-w-3xl rounded-3xl border border-border overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/10">
+              <div>
+                <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" /> Ghim vị trí nhận hàng
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5 font-medium">Click chuột hoặc kéo ghim để định vị chính xác vị trí nhận hàng</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsMapModalOpen(false)}
+                className="text-foreground hover:text-primary transition-colors text-lg font-bold w-8 h-8 flex items-center justify-center hover:bg-muted rounded-full cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="flex-1 relative min-h-[350px] md:min-h-[450px]">
+              <div ref={mapRef} className="absolute inset-0 z-10 w-full h-full" />
+              {geocoding && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-background/90 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-lg flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Đang xác định địa chỉ...
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-border bg-muted/5 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+              <div className="text-xs font-bold text-foreground bg-muted/40 p-3.5 rounded-2xl border border-border flex-1">
+                <span className="text-muted-foreground block mb-0.5 uppercase tracking-widest text-[9px]">Địa chỉ định vị:</span>
+                {tempAddress || "Chưa có vị trí được chọn"}
+              </div>
+              <div className="flex gap-3 shrink-0">
+                <Button type="button" variant="outline" onClick={() => setIsMapModalOpen(false)} className="rounded-xl font-bold h-11 px-5">Hủy</Button>
+                <Button type="button" onClick={confirmMapSelection} disabled={!tempAddress || geocoding} className="rounded-xl font-bold h-11 px-5">Xác nhận vị trí</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

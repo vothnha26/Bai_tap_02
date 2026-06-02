@@ -11,7 +11,13 @@ class TierController {
           populate: { path: 'benefits.benefitId' }
         });
       
-      if (!membership) return res.status(404).json({ status: 'error', message: 'Membership not found' });
+      // Nếu user chưa có membership (đăng ký mới), trả về giá trị mặc định thay vì 404
+      if (!membership) {
+        return res.json({ 
+          status: 'success', 
+          data: { rollingPoints: 0, currentPoints: 0, tierId: null } 
+        });
+      }
       res.json({ status: 'success', data: membership });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
@@ -23,7 +29,7 @@ class TierController {
       const logs = await RewardLog.find({ userId: req.user.id })
         .sort({ createdAt: -1 })
         .limit(50);
-      res.json({ status: 'success', data: logs });
+      res.json({ status: 'success', data: logs || [] });
     } catch (error) {
       res.status(500).json({ status: 'error', message: error.message });
     }

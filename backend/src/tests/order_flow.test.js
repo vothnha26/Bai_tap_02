@@ -22,7 +22,7 @@ describe('Order Lifecycle and Cancellation Flow', () => {
   let inventory;
 
   beforeAll(async () => {
-    if (!redisClient.isOpen) {
+    if (redisClient && !redisClient.isOpen) {
       await redisClient.connect();
     }
 
@@ -73,11 +73,12 @@ describe('Order Lifecycle and Cancellation Flow', () => {
     if (inventory) await Inventory.deleteOne({ _id: inventory._id });
     if (user) {
       await Order.deleteMany({ userId: user._id });
-      if (redisClient.isOpen) await redisClient.del(`cart:${user._id}`);
+      if (redisClient && redisClient.isOpen) await redisClient.del(`cart:${user._id}`);
     }
-    if (redisClient.isOpen) await redisClient.quit();
+    if (redisClient && redisClient.isOpen) await redisClient.quit();
     await mongoose.connection.close();
   });
+
 
   const createMockOrder = async (status, createdAtOffsetMins = 0) => {
     const createdAt = new Date(Date.now() - createdAtOffsetMins * 60 * 1000);
@@ -93,7 +94,11 @@ describe('Order Lifecycle and Cancellation Flow', () => {
       totalAmount: 200,
       discountAmount: 0,
       finalAmount: 200,
-      shippingAddress: '123 Test St',
+      shippingAddress: {
+        province: 'Test Province',
+        ward: 'Test Ward',
+        street: '123 Test St'
+      },
       phone: '123456789',
       paymentMethod: 'COD',
       status: status,

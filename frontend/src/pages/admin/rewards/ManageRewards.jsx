@@ -46,9 +46,9 @@ export default function ManageRewards() {
         rewardService.getProductRewardRules(),
         productApi.getAll()
       ]);
-      setTiers(tiersRes.data);
-      setBenefits(benefitsRes.data);
-      setRules(rulesRes.data || []);
+      setTiers(Array.isArray(tiersRes) ? tiersRes : (tiersRes?.data || []));
+      setBenefits(Array.isArray(benefitsRes) ? benefitsRes : (benefitsRes?.data || []));
+      setRules(Array.isArray(rulesRes) ? rulesRes : (rulesRes?.data || []));
       setProducts(productsRes.data?.data?.products || productsRes.data?.products || []);
     } catch (error) {
       toast.error('Lỗi khi tải dữ liệu: ' + error.message);

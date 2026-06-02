@@ -4,6 +4,7 @@ const otpService = require('./otp.service');
 const emailQueue = require('../email/email.queue');
 const jwtUtils = require('../../utils/jwt.utils');
 const redisClient = require('../../config/redis');
+const logger = require('../../utils/logger');
 
 const { USER_STATUS, AUTH_PROVIDERS, ERROR_MESSAGES } = require('../../utils/constants');
 
@@ -22,7 +23,7 @@ class AuthService {
       throw error;
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     
     // Create user with status INACTIVE (pending)
     const user = await userRepository.createUser(
@@ -140,12 +141,14 @@ class AuthService {
 
     // Check account status
     if (user.status === USER_STATUS.INACTIVE) {
+      logger.warn(`[Auth] Failed login attempt for email: ${email} - Reason: Account not activated`);
       const error = new Error(ERROR_MESSAGES.ACCOUNT_NOT_ACTIVATED);
       error.status = 403;
       throw error;
     }
 
     if (user.status === USER_STATUS.BANNED) {
+      logger.warn(`[Auth] Failed login attempt for email: ${email} - Reason: Account banned`);
       const error = new Error(ERROR_MESSAGES.ACCOUNT_BANNED);
       error.status = 403;
       throw error;
@@ -154,10 +157,13 @@ class AuthService {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
+      logger.warn(`[Auth] Failed login attempt for email: ${email} - Reason: Invalid password`);
       const error = new Error(ERROR_MESSAGES.INVALID_PASSWORD);
       error.status = 401;
       throw error;
     }
+
+    logger.info(`[Auth] Successful login for user: ${user.id} (${user.email})`);
 
     // Generate JWT tokens
     const accessToken = jwtUtils.generateAccessToken({
@@ -239,11 +245,14 @@ class AuthService {
         newTokenHash
       );
 
+      logger.info(`[Auth] Token refreshed for user: ${userId}`);
+
       return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken
       };
     } catch (error) {
+      logger.error(`[Auth] Token refresh failed: ${error.message}`);
       const err = new Error(error.message || 'Token refresh failed');
       err.status = 401;
       throw err;
@@ -334,7 +343,7 @@ class AuthService {
       throw error;
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
     const updateResult = await userRepository.updateLocalPassword(normalizedEmail, passwordHash);
     if (!updateResult) {
       const error = new Error('Local account not found');
@@ -347,6 +356,8 @@ class AuthService {
       redisClient.del(attemptsKey),
       redisClient.del(`refresh:${user.id}`)
     ]);
+
+    logger.info(`[Auth] Password reset successful for user: ${user.id} (${user.email})`);
 
     return { message: ERROR_MESSAGES.RESET_PASSWORD_SUCCESS };
   }
