@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const EmailStrategy = require('./email.strategy');
+const logger = require('../../utils/logger');
 
 class NodemailerStrategy extends EmailStrategy {
   constructor() {
@@ -18,19 +19,19 @@ class NodemailerStrategy extends EmailStrategy {
     // Use console email if in dev and missing/placeholder, OR if explicitly requested
     this.useConsoleEmail = (process.env.NODE_ENV !== 'production' && (isMissing || isPlaceholder));
 
-    console.log(`[Email Config] Using User: ${user}`);
-    console.log(`[Email Config] Port: ${port}, Secure: ${isSecure}`);
-    console.log(`[Email Config] Mode: ${this.useConsoleEmail ? 'CONSOLE' : 'SMTP'}`);
+    logger.info(`[Email Config] Using User: ${user}`);
+    logger.info(`[Email Config] Port: ${port}, Secure: ${isSecure}`);
+    logger.info(`[Email Config] Mode: ${this.useConsoleEmail ? 'CONSOLE' : 'SMTP'}`);
 
     this.emailUser = user;
 
     if (this.useConsoleEmail) {
-      console.warn('⚠️ Email credentials are not configured or using placeholders. OTP emails will be printed to console.');
+      logger.warn('⚠️ Email credentials are not configured or using placeholders. OTP emails will be printed to console.');
       return;
     }
 
     if (isMissing) {
-      console.error('❌ Error: Email credentials (EMAIL_USER/EMAIL_PASS) are missing.');
+      logger.error('❌ Error: Email credentials (EMAIL_USER/EMAIL_PASS) are missing.');
       this.useConsoleEmail = true;
       return;
     }
@@ -48,20 +49,20 @@ class NodemailerStrategy extends EmailStrategy {
     // Verify connection configuration
     this.transporter.verify((error, success) => {
       if (error) {
-        console.error('❌ SMTP Connection Error:', error.message);
+        logger.error('❌ SMTP Connection Error:', error.message);
       } else {
-        console.log('✅ SMTP Server is ready to take our messages');
+        logger.info('✅ SMTP Server is ready to take our messages');
       }
     });
   }
 
   async send(to, subject, text) {
     if (this.useConsoleEmail) {
-      console.log('----- DEV EMAIL -----');
-      console.log(`To: ${to}`);
-      console.log(`Subject: ${subject}`);
-      console.log(text);
-      console.log('---------------------');
+      logger.info('----- DEV EMAIL -----');
+      logger.info(`To: ${to}`);
+      logger.info(`Subject: ${subject}`);
+      logger.info(text);
+      logger.info('---------------------');
       return;
     }
 
@@ -73,7 +74,7 @@ class NodemailerStrategy extends EmailStrategy {
         text
       });
     } catch (error) {
-      console.error('❌ Failed to send email via SMTP:', error.message);
+      logger.error('❌ Failed to send email via SMTP:', error.message);
       throw error;
     }
   }

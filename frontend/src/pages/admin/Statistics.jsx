@@ -36,7 +36,6 @@ export default function Statistics() {
         const response = await statisticsApi.getAdminStats();
         setStatsData(response.data);
       } catch (error) {
-        console.error('Error fetching stats:', error);
         if (error.message.includes('expired')) {
           alert('Phiên làm việc hết hạn, vui lòng đăng nhập lại');
           await logout();

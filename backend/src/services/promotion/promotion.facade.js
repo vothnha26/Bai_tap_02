@@ -2,6 +2,7 @@ const { PROMOTION_MATCH_TYPES, PROMOTION_USER_GROUPS } = require('../../utils/co
 const PromotionStrategyFactory = require('./promotion.factory');
 const priceService = require('./price.service');
 const mongoose = require('mongoose');
+const logger = require('../../utils/logger');
 
 class PromotionCalculatorFacade {
   async calculate(promotion, items, userId, shippingFee = 0) {
@@ -36,7 +37,7 @@ class PromotionCalculatorFacade {
         };
       });
     } catch (err) {
-      console.error('Error hydrating items in PromotionCalculatorFacade:', err);
+      logger.error('Error hydrating items in PromotionCalculatorFacade:', err);
     }
 
     const now = new Date();

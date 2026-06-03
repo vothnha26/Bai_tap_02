@@ -1,4 +1,5 @@
 const redisClient = require('../../config/redis');
+const logger = require('../../utils/logger');
 
 const QUEUE_NAME = 'email_queue';
 
@@ -11,7 +12,7 @@ class EmailQueue {
   async push(type, data) {
     const job = JSON.stringify({ type, data, timestamp: Date.now() });
     await redisClient.lPush(QUEUE_NAME, job);
-    console.log(`[Queue] Job pushed to ${QUEUE_NAME}: ${type} for ${data.email}`);
+    logger.info(`[Queue] Job pushed to ${QUEUE_NAME}: ${type} for ${data.email}`);
   }
 
   get queueName() {

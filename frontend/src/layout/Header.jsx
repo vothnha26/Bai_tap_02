@@ -49,7 +49,7 @@ export default function Header() {
             setSuggestions(res.data.products);
           }
         } catch (err) {
-          console.error('Error fetching suggestions:', err);
+          // Silent catch
         }
       }, 300);
     } else {

@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const connectDB = require('./config/mongoose');
 const redisClient = require('./config/redis');
+const logger = require('./utils/logger');
 
 // Existing Email Queue (Manual Redis List)
 const emailQueue = require('./services/email/email.queue');
@@ -16,7 +17,7 @@ const { downgradeWorker, scheduleMonthlyDowngrade } = require('./services/reward
  * Process Legacy Email Jobs (Manual BRPOP)
  */
 const processEmailJobs = async () => {
-  console.log(`[Worker] Legacy Email worker listening on: "${emailQueue.queueName}"`);
+  logger.info(`[Worker] Legacy Email worker listening on: "${emailQueue.queueName}"`);
   
   while (true) {
     try {
@@ -26,12 +27,12 @@ const processEmailJobs = async () => {
         const job = JSON.parse(element);
         const { type, data } = job;
 
-        console.log(`[EmailWorker] Processing ${type} for ${data.email}`);
+        logger.info(`[EmailWorker] Processing ${type} for ${data.email}`);
         if (type === 'otp') await emailService.sendOTP(data.email, data.otp);
         else if (type === 'forgot_password') await emailService.sendForgotPasswordOTP(data.email, data.otp);
       }
     } catch (error) {
-      console.error('[EmailWorker] Error:', error.message);
+      logger.error('[EmailWorker] Error:', error.message);
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
@@ -40,26 +41,26 @@ const processEmailJobs = async () => {
 const startWorkers = async () => {
   await connectDB();
 
-  console.log('--------------------------------------------------');
-  console.log(`[Worker] PubliCast System Workers started at ${new Date().toLocaleString()}`);
-  console.log('--------------------------------------------------');
+  logger.info('--------------------------------------------------');
+  logger.info(`[Worker] PubliCast System Workers started at ${new Date().toLocaleString()}`);
+  logger.info('--------------------------------------------------');
 
   // Start BullMQ Workers
-  console.log('[Worker] BullMQ Review Worker: ONLINE');
-  console.log('[Worker] BullMQ Reward Worker: ONLINE');
-  console.log('[Worker] BullMQ Tier Downgrade Worker: ONLINE');
+  logger.info('[Worker] BullMQ Review Worker: ONLINE');
+  logger.info('[Worker] BullMQ Reward Worker: ONLINE');
+  logger.info('[Worker] BullMQ Tier Downgrade Worker: ONLINE');
 
   // Schedule repeatable jobs
   await scheduleMonthlyDowngrade();
-  console.log('[Worker] Cron Jobs scheduled.');
+  logger.info('[Worker] Cron Jobs scheduled.');
 
   // Start Legacy Workers
-  processEmailJobs().catch(err => console.error('[Worker] EmailWorker Fatal:', err));
+  processEmailJobs().catch(err => logger.error('[Worker] EmailWorker Fatal:', err));
 };
 
 // Handle graceful shutdown
 const shutdown = async () => {
-  console.log('\n[Worker] 🛑 Shutting down gracefully...');
+  logger.info('\n[Worker] 🛑 Shutting down gracefully...');
   await Promise.all([
     reviewWorker.close(),
     rewardWorker.close(),
@@ -73,6 +74,6 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 startWorkers().catch(err => {
-  console.error('[Worker] 💀 Fatal error:', err);
+  logger.error('[Worker] 💀 Fatal error:', err);
   process.exit(1);
 });

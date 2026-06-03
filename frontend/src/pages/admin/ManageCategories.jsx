@@ -25,7 +25,6 @@ export default function ManageCategories() {
       const response = await categoryApi.getAll();
       setCategories(response.data);
     } catch (error) {
-      console.error('Error:', error);
     } finally {
       setIsLoading(false);
     }

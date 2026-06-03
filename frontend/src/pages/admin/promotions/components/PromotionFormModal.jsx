@@ -140,7 +140,6 @@ export default function PromotionFormModal({
     try {
       await onSubmit(payload);
     } catch (error) {
-      console.error(error);
     } finally {
       setIsSubmitting(false);
     }

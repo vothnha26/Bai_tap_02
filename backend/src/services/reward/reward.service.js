@@ -4,6 +4,7 @@ const RewardLog = require('../../models/RewardLog');
 const ProductRewardRule = require('../../models/ProductRewardRule');
 const BenefitRegistry = require('../promotion/BenefitRegistry');
 const { REWARD_SOURCES } = require('../../utils/constants');
+const logger = require('../../utils/logger');
 
 class RewardService {
   /**
@@ -119,7 +120,7 @@ class RewardService {
       membership.tierId = eligibleTier._id;
       membership.tierChangedAt = new Date();
       await membership.save();
-      console.log(`[RewardService] User ${membership.userId} upgraded to ${eligibleTier.code}`);
+      logger.info(`[RewardService] User ${membership.userId} upgraded to ${eligibleTier.code}`);
     }
   }
 }

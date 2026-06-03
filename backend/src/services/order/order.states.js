@@ -2,6 +2,7 @@ const { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, ERROR_MESSAGES } = require
 const productRepository = require('../../repositories/product.repository');
 const orderRepository = require('../../repositories/order.repository');
 const { orderEventEmitter, ORDER_EVENTS } = require('./order.event');
+const logger = require('../../utils/logger');
 
 /**
  * Base Order State
@@ -201,7 +202,7 @@ class ShippingState extends OrderState {
         }
       } catch (rewardError) {
         // Ghi nhận lỗi nhưng không chặn luồng giao dịch chính
-        console.error('Lỗi khi tính và đẩy điểm thưởng vào queue cho đơn hàng:', rewardError);
+        logger.error('Lỗi khi tính và đẩy điểm thưởng vào queue cho đơn hàng:', rewardError);
       }
     }
 

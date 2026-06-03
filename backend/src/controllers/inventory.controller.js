@@ -3,6 +3,7 @@ const inventoryTransactionRepository = require('../repositories/inventoryTransac
 const inventoryService = require('../services/inventory/InventoryService');
 const Inventory = require('../models/Inventory');
 const Product = require('../models/Product');
+const logger = require('../utils/logger');
 
 class InventoryController {
   // Lấy danh sách tồn kho cho admin
@@ -54,7 +55,7 @@ class InventoryController {
         }
       });
     } catch (error) {
-      console.error('Error in getInventoryList:', error);
+      logger.error('Error in getInventoryList:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -68,7 +69,7 @@ class InventoryController {
         data: lowStockItems
       });
     } catch (error) {
-      console.error('Error in getLowStockInventory:', error);
+      logger.error('Error in getLowStockInventory:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -115,7 +116,7 @@ class InventoryController {
         data: populatedInventory
       });
     } catch (error) {
-      console.error('Error in updateInventory:', error);
+      logger.error('Error in updateInventory:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -151,7 +152,7 @@ class InventoryController {
         data: populatedInventory
       });
     } catch (error) {
-      console.error('Error in submitStockTake:', error);
+      logger.error('Error in submitStockTake:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -178,7 +179,7 @@ class InventoryController {
         data: result
       });
     } catch (error) {
-      console.error('Error in getTransactionsList:', error);
+      logger.error('Error in getTransactionsList:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

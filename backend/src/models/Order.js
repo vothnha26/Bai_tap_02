@@ -99,6 +99,10 @@ orderSchema.set('toJSON', {
   }
 });
 
+// Indexes for performance optimization
+orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ status: 1 });
+
 const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order;

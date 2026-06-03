@@ -1,0 +1,250 @@
+Jest has detected the following 9 open handles potentially keeping Jest from exiting:      
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/auth_security.test.js:3:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/order.test.js:5:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/inventory.concurrency.test.js:4:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/order_address.test.js:5:13)
+
+
+  ●  TCPWRAP
+
+      2 | const { connection, DEFAULT_JOB_OPTIONS, prefix } = require('../../config/bullmq');
+      3 |
+    > 4 | const reviewQueue = new Queue('review_queue', {
+        |                     ^
+      5 |   connection,
+      6 |   defaultJobOptions: DEFAULT_JOB_OPTIONS,
+      7 |   prefix,
+
+      at node_modules/bullmq/node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/bullmq/node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/bullmq/node_modules/ioredis/built/Redis.js:122:64
+      at EventEmitter.connect (node_modules/bullmq/node_modules/ioredis/built/Redis.js:104:25)
+      at new Redis (node_modules/bullmq/node_modules/ioredis/built/Redis.js:77:18)
+      at RedisConnection.init (node_modules/bullmq/dist/cjs/classes/redis-connection.js:183:80)
+      at new RedisConnection (node_modules/bullmq/dist/cjs/classes/redis-connection.js:86:34)
+      at new QueueBase (node_modules/bullmq/dist/cjs/classes/queue-base.js:37:27)
+      at new Queue (node_modules/bullmq/dist/cjs/classes/queue.js:40:9)
+      at Object.<anonymous> (src/services/review/ReviewQueue.js:4:21)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/order_flow.test.js:5:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/double_layer_discount.test.js:4:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/promotion.integration.test.js:5:13)
+
+
+  ●  TCPWRAP
+
+      11 | } else {
+      12 |   const IORedis = require('ioredis');
+    > 13 |   connection = new IORedis({
+         |                ^
+      14 |     host: process.env.REDIS_HOST || '127.0.0.1',
+      15 |     port: process.env.REDIS_PORT || 6379,
+      16 |     maxRetriesPerRequest: null, // Required for BullMQ
+
+      at node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/ioredis/built/Redis.js:134:64
+      at EventEmitter._connect (node_modules/ioredis/built/Redis.js:116:16)
+      at promise.address.address (node_modules/ioredis/built/Redis.js:105:64)
+      at traceConnect (node_modules/ioredis/built/tracing.js:93:16)
+      at EventEmitter.connect (node_modules/ioredis/built/Redis.js:105:52)
+      at new Redis (node_modules/ioredis/built/Redis.js:78:18)
+      at Object.<anonymous> (src/config/redis.ioredis.js:13:16)
+      at Object.<anonymous> (src/config/bullmq.js:1:46)
+      at Object.require (src/services/review/ReviewQueue.js:2:53)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/cart.test.js:5:13)
+
+
+  ●  TCPWRAP
+
+      2 | const { connection, DEFAULT_JOB_OPTIONS, prefix } = require('../../config/bullmq');
+      3 |
+    > 4 | const reviewQueue = new Queue('review_queue', {
+        |                     ^
+      5 |   connection,
+      6 |   defaultJobOptions: DEFAULT_JOB_OPTIONS,
+      7 |   prefix,
+
+      at node_modules/bullmq/node_modules/ioredis/built/connectors/StandaloneConnector.js:44:21
+      at StandaloneConnector.connect (node_modules/bullmq/node_modules/ioredis/built/connectors/StandaloneConnector.js:43:16)
+      at node_modules/bullmq/node_modules/ioredis/built/Redis.js:122:64
+      at EventEmitter.connect (node_modules/bullmq/node_modules/ioredis/built/Redis.js:104:25)
+      at new Redis (node_modules/bullmq/node_modules/ioredis/built/Redis.js:77:18)
+      at RedisConnection.init (node_modules/bullmq/dist/cjs/classes/redis-connection.js:183:80)
+      at new RedisConnection (node_modules/bullmq/dist/cjs/classes/redis-connection.js:86:34)
+      at new QueueBase (node_modules/bullmq/dist/cjs/classes/queue-base.js:37:27)
+      at new Queue (node_modules/bullmq/dist/cjs/classes/queue.js:40:9)
+      at Object.<anonymous> (src/services/review/ReviewQueue.js:4:21)
+      at Object.require (src/services/review/review.service.js:2:21)
+      at Object.<anonymous> (src/controllers/review.controller.js:1:67)
+      at Object.require (src/routes/review.routes.js:3:26)
+      at Object.require (src/app.js:15:22)
+      at Object.require (src/tests/product_reward_rule.test.js:5:13)

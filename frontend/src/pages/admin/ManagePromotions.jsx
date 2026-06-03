@@ -42,7 +42,6 @@ export default function ManagePromotions() {
       }
       setCategories(catsRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
     } finally {
       setIsLoading(false);
     }

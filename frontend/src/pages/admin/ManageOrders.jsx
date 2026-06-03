@@ -53,7 +53,6 @@ const ManageOrders = () => {
       const data = await orderService.getAllOrdersAdmin();
       setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching admin orders:', error);
     } finally {
       setLoading(false);
     }

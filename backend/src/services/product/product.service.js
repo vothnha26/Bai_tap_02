@@ -1,6 +1,7 @@
 const productRepository = require('../../repositories/product.repository');
 const priceService = require('../promotion/price.service');
 const { generateSlug } = require('../../utils/utils');
+const logger = require('../../utils/logger');
 
 class ProductService {
   async getHomePageData() {
@@ -33,7 +34,7 @@ class ProductService {
     }
 
     // Tăng lượt xem bất đồng bộ (không đợi)
-    productRepository.incrementViewCount(slug).catch(err => console.error('View increment error:', err));
+    productRepository.incrementViewCount(slug).catch(err => logger.error('View increment error:', err));
 
     const similarProducts = await productRepository.getSimilarProducts(
       product._id,

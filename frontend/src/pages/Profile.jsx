@@ -144,7 +144,7 @@ const Profile = () => {
             totalPages: Math.ceil((data.total || 0) / orderFilters.limit)
           });
         } catch (err) {
-          console.error(err);
+          // Silent catch
           toast.error("Lỗi tải danh sách đơn hàng");
         } finally {
           setOrdersLoading(false);
@@ -168,7 +168,7 @@ const Profile = () => {
           setRewardLogs(logsRes.data || logsRes || []);
           setTiers(tiersRes.data || tiersRes || []);
         } catch (err) {
-          console.error(err);
+          // Silent catch
         } finally {
           setMembershipLoading(false);
         }
@@ -183,7 +183,6 @@ const Profile = () => {
       const addrList = addrRes.data?.addresses || addrRes.addresses || addrRes;
       setAddresses(addrList || []);
     } catch (err) {
-      console.error(err);
     }
   };
 

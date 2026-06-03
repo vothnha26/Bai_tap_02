@@ -86,7 +86,6 @@ export default function AddProduct() {
         const response = await categoryApi.getAll();
         setAllCategories(response.data);
       } catch (err) {
-        console.error('Failed to fetch categories:', err);
       }
     };
     fetchCategories();

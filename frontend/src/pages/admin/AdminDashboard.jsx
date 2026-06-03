@@ -30,7 +30,7 @@ export default function AdminDashboard() {
       setTotalProducts(response.data.pagination.totalProducts);
       setPage(response.data.pagination.currentPage);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      // Error handled
     } finally {
       setIsLoading(false);
     }

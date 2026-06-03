@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -111,7 +112,7 @@ productSchema.post('save', async function (doc) {
       );
     }
   } catch (err) {
-    console.error('Error in Product post-save hook for Inventory:', err);
+    logger.error('Error in Product post-save hook for Inventory:', err);
   }
 });
 
@@ -137,7 +138,7 @@ productSchema.pre('findOneAndUpdate', async function () {
       );
     }
   } catch (err) {
-    console.error('Error in Product pre-findOneAndUpdate hook for Inventory:', err);
+    logger.error('Error in Product pre-findOneAndUpdate hook for Inventory:', err);
   }
 });
 

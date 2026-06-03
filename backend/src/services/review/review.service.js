@@ -1,6 +1,7 @@
 const Review = require('../../models/Review');
 const reviewQueue = require('./ReviewQueue');
 const { REVIEW_STATUS } = require('../../utils/constants');
+const logger = require('../../utils/logger');
 
 class ReviewService {
   async submitReview(userId, data) {
@@ -18,13 +19,13 @@ class ReviewService {
 
     // Push to moderation queue
     try {
-      console.log(`[ReviewService] Pushing review ${review._id} to reviewQueue...`);
+      logger.info(`[ReviewService] Pushing review ${review._id} to reviewQueue...`);
       const job = await reviewQueue.add(`moderate.review.${review._id}`, {
         reviewId: review._id,
       });
-      console.log(`[ReviewService] Successfully pushed job ${job.id} to reviewQueue`);
+      logger.info(`[ReviewService] Successfully pushed job ${job.id} to reviewQueue`);
     } catch (err) {
-      console.error('[ReviewService] Error pushing to reviewQueue:', err);
+      logger.error('[ReviewService] Error pushing to reviewQueue:', err);
     }
 
     return review;

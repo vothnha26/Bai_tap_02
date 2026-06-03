@@ -82,14 +82,13 @@ class ProductRepository {
       if (categoryInputs.length > 0) {
         const mongoose = require('mongoose');
         const categoryIds = [];
+        const slugInputs = [];
         
         for (const input of categoryInputs) {
           if (mongoose.Types.ObjectId.isValid(input)) {
             categoryIds.push(input);
           } else if (input === 'khuyen-mai') {
             // Xử lý slug ảo: Khuyến mãi (lọc các sp có giá giảm)
-            query.discountPrice = { $ne: null, $lt: '$price' }; // MongoDB logic inside query object
-            // Lưu ý: $lt: '$price' chỉ chạy trong $expr, nên ta dùng cách đơn giản hơn
             query.discountPrice = { $exists: true, $ne: null };
           } else if (input === 'ban-chay') {
             // Xử lý slug ảo: Bán chạy (thay đổi sort mặc định nếu chưa có sort cụ thể)
@@ -97,10 +96,14 @@ class ProductRepository {
               sort = { soldCount: -1 };
             }
           } else {
-            // Nếu là slug thực tế trong DB, tìm ID
-            const category = await Category.findOne({ slug: input });
-            if (category) categoryIds.push(category._id);
+            // Gom các slug thực tế lại để query 1 lần
+            slugInputs.push(input);
           }
+        }
+
+        if (slugInputs.length > 0) {
+          const categories = await Category.find({ slug: { $in: slugInputs } });
+          categories.forEach(cat => categoryIds.push(cat._id));
         }
 
         if (categoryIds.length > 0) {

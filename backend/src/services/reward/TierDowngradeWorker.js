@@ -2,6 +2,7 @@ const { Worker, Queue } = require('bullmq');
 const { connection, DEFAULT_JOB_OPTIONS, prefix } = require('../../config/bullmq');
 const Membership = require('../../models/Membership');
 const Tier = require('../../models/Tier');
+const logger = require('../../utils/logger');
 
 const CRON_QUEUE_NAME = 'cron_queue';
 
@@ -23,7 +24,7 @@ async function scheduleMonthlyDowngrade() {
 // Consumer part (Worker)
 const downgradeWorker = new Worker(CRON_QUEUE_NAME, async (job) => {
   if (job.name === 'monthly_tier_downgrade') {
-    console.log('[TierDowngradeWorker] Starting monthly point expiration...');
+    logger.info('[TierDowngradeWorker] Starting monthly point expiration...');
     
     // Calculate the month key that is 13 months ago
     const date = new Date();
@@ -48,7 +49,7 @@ const downgradeWorker = new Worker(CRON_QUEUE_NAME, async (job) => {
         const eligibleTier = tiers.find(t => membership.rollingPoints >= t.minPoints);
         
         if (eligibleTier && eligibleTier._id.toString() !== membership.tierId.toString()) {
-          console.log(`[TierDowngradeWorker] User ${membership.userId} downgraded to ${eligibleTier.code}`);
+          logger.info(`[TierDowngradeWorker] User ${membership.userId} downgraded to ${eligibleTier.code}`);
           membership.tierId = eligibleTier._id;
           membership.tierChangedAt = new Date();
         }
@@ -57,7 +58,7 @@ const downgradeWorker = new Worker(CRON_QUEUE_NAME, async (job) => {
       }
     }
     
-    console.log('[TierDowngradeWorker] Completed monthly point expiration.');
+    logger.info('[TierDowngradeWorker] Completed monthly point expiration.');
   }
 }, { connection, prefix });
 

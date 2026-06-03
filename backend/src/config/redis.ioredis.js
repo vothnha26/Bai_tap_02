@@ -1,4 +1,5 @@
 let connection;
+const logger = require('../utils/logger');
 
 if (process.env.USE_MEMORY_REDIS === 'true') {
   connection = {
@@ -16,7 +17,7 @@ if (process.env.USE_MEMORY_REDIS === 'true') {
   });
 
   connection.on('error', (err) => {
-    console.error('BullMQ Redis Connection Error:', err);
+    logger.error('BullMQ Redis Connection Error:', err);
   });
 }
 

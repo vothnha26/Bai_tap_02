@@ -224,7 +224,7 @@ export default function EditProduct() {
         });
       } else {
         // Xóa discount nếu admin bỏ chọn giảm giá
-        await productApi.deleteDiscount(targetId).catch(err => console.log('No discount to delete or delete failed:', err));
+        await productApi.deleteDiscount(targetId).catch(err => {});
       }
 
       alert('Cập nhật sản phẩm thành công!');

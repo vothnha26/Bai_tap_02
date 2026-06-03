@@ -16,7 +16,7 @@ const OrderSuccess = () => {
         const data = await orderService.getOrderById(orderId);
         setOrder(data);
       } catch (error) {
-        console.error('Error fetching order:', error);
+        // Silent catch
       } finally {
         setLoading(false);
       }

@@ -22,7 +22,6 @@ export const AuthProvider = ({ children }) => {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error('Failed to parse user from localStorage', error);
         localStorage.removeItem('user');
       }
     }
@@ -38,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await authApi.logout();
     } catch (error) {
-      console.error('Logout API failed:', error);
+      // Ignore logout API failure
     } finally {
       setUser(null);
       localStorage.removeItem('user');

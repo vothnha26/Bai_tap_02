@@ -1,3 +1,5 @@
+process.env.USE_MEMORY_REDIS = 'true';
+
 if (process.env.USE_MEMORY_REDIS === 'true') {
   const EventEmitter = require('events');
 

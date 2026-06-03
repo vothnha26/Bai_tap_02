@@ -112,7 +112,6 @@ export default function ManageInventory() {
         setLowStockCount(response.data.length);
       }
     } catch (error) {
-      console.error('Error fetching low stock count:', error);
     }
   };
 
@@ -359,4 +358,6 @@ export default function ManageInventory() {
       />
     </div>
   );
+}
+ );
 }

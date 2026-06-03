@@ -3,7 +3,11 @@ const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI;
+    let mongoUri = process.env.MONGODB_URI;
+    
+    if (process.env.NODE_ENV === 'test') {
+      mongoUri = process.env.MONGODB_URI_TEST || mongoUri;
+    }
     
     if (!mongoUri) {
       if (process.env.NODE_ENV === 'production') {
@@ -12,7 +16,9 @@ const connectDB = async () => {
       logger.warn('MONGODB_URI is not defined. Falling back to local default (for development only).');
     }
 
-    const defaultUri = 'mongodb://127.0.0.1:27017/baitap04_mongodb';
+    const defaultUri = process.env.NODE_ENV === 'test'
+      ? 'mongodb://root:root_password@127.0.0.1:27017/baitap04_mongodb_test?authSource=admin'
+      : 'mongodb://root:root_password@127.0.0.1:27017/baitap04_mongodb?authSource=admin';
     const uri = mongoUri || defaultUri;
     
     logger.info('Connecting to MongoDB...');

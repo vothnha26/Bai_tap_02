@@ -22,7 +22,7 @@ describe('Order API', () => {
     }
 
     // Connect to a test database if not connected
-    const testMongoUri = process.env.MONGODB_URI_TEST || 'mongodb://root:root_password@127.0.0.1:27017/shop_mongodb_test?authSource=admin';
+    const testMongoUri = process.env.MONGODB_URI_TEST || 'mongodb://root:root_password@127.0.0.1:27017/baitap04_mongodb_test?authSource=admin';
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(testMongoUri);
     }
@@ -114,8 +114,8 @@ describe('Order API', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThan(0);
+      expect(Array.isArray(res.body.orders)).toBe(true);
+      expect(res.body.orders.length).toBeGreaterThan(0);
     });
   });
 });

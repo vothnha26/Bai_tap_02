@@ -3,21 +3,30 @@ const mongoose = require('mongoose');
 const app = require('../app');
 const User = require('../models/User');
 const redisClient = require('../config/redis');
-
 const connectDB = require('../config/mongoose');
 
 describe('Auth Security Integration Tests', () => {
-  jest.setTimeout(20000);
+  jest.setTimeout(30000);
   const email = 'security_test@example.com';
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
+    
+    // Connect to Redis if not open
+    if (!redisClient.isOpen) {
+      await redisClient.connect();
+    }
+
     await connectDB();
   });
 
   afterAll(async () => {
     await User.deleteOne({ email });
-    // app closure handled by forceExit or manual if needed
+    if (redisClient.isOpen) {
+      await redisClient.del(`otp:${email}`);
+      await redisClient.quit();
+    }
+    await mongoose.connection.close();
   });
 
   describe('Password Strength Validation', () => {

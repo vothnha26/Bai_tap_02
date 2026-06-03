@@ -119,7 +119,6 @@ export default function Search() {
           return [...prev, ...uniqueNewProducts];
         });
       } catch (err) {
-        console.error('Failed to fetch more products:', err);
       } finally {
         setIsFetchingMore(false);
       }
@@ -445,4 +444,5 @@ export default function Search() {
       </div>
     </div>
   );
+}
 }

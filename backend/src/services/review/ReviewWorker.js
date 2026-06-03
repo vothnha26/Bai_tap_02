@@ -3,6 +3,7 @@ const { connection, prefix } = require('../../config/bullmq');
 const Review = require('../../models/Review');
 const rewardQueue = require('../reward/RewardQueue');
 const { REVIEW_STATUS, REWARD_SOURCES } = require('../../utils/constants');
+const logger = require('../../utils/logger');
 
 const reviewWorker = new Worker('review_queue', async (job) => {
   const { reviewId } = job.data;
@@ -10,7 +11,7 @@ const reviewWorker = new Worker('review_queue', async (job) => {
   const review = await Review.findById(reviewId);
   if (!review) return;
 
-  console.log(`[ReviewWorker] Moderating review ${reviewId}...`);
+  logger.info(`[ReviewWorker] Moderating review ${reviewId}...`);
 
   // Simple moderation logic: auto-approve if rating >= 3
   // In real world, use AI or bad words filter
@@ -18,7 +19,7 @@ const reviewWorker = new Worker('review_queue', async (job) => {
     review.status = REVIEW_STATUS.APPROVED;
     await review.save();
 
-    console.log(`[ReviewWorker] Review ${reviewId} APPROVED. Triggering reward...`);
+    logger.info(`[ReviewWorker] Review ${reviewId} APPROVED. Triggering reward...`);
 
     // Add to Reward Queue
     // Base points for a review could be 50 (can be configured)
@@ -33,7 +34,7 @@ const reviewWorker = new Worker('review_queue', async (job) => {
   } else {
     review.status = REVIEW_STATUS.REJECTED;
     await review.save();
-    console.log(`[ReviewWorker] Review ${reviewId} REJECTED.`);
+    logger.info(`[ReviewWorker] Review ${reviewId} REJECTED.`);
   }
 }, {
   connection,
@@ -42,17 +43,17 @@ const reviewWorker = new Worker('review_queue', async (job) => {
 });
 
 reviewWorker.on('completed', (job) => {
-  console.log(`[ReviewWorker] Job ${job.id} completed!`);
+  logger.info(`[ReviewWorker] Job ${job.id} completed!`);
 });
 
 reviewWorker.on('failed', (job, err) => {
-  console.error(`[ReviewWorker] Job ${job?.id} failed:`, err);
+  logger.error(`[ReviewWorker] Job ${job?.id} failed:`, err);
 });
 
 reviewWorker.on('error', (err) => {
-  console.error('[ReviewWorker] Global worker error:', err);
+  logger.error('[ReviewWorker] Global worker error:', err);
 });
 
-console.log('[ReviewWorker] Initialized and listening on review_queue');
+logger.info('[ReviewWorker] Initialized and listening on review_queue');
 
 module.exports = reviewWorker;

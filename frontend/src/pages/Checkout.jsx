@@ -95,7 +95,7 @@ const Checkout = () => {
           if (user?.phone) setFormData(prev => ({ ...prev, phone: user.phone }));
         }
       } catch (err) {
-        console.error('Lỗi tải dữ liệu tĩnh:', err);
+        // Silent catch
       } finally {
         setIsLoading(false);
       }
@@ -112,7 +112,7 @@ const Checkout = () => {
         const promoRes = await promotionApi.getApplicable(cart.items, 0);
         setApplicablePromotions(promoRes.data || []);
       } catch (err) {
-        console.error('Lỗi tải khuyến mãi:', err);
+        // Silent catch
       }
     };
     loadPromotions();
@@ -201,7 +201,7 @@ const Checkout = () => {
         toast.success('Đã xác định vị trí hiện tại');
       },
       (error) => {
-        console.error('Geolocation error:', error);
+        // Silent catch
         toast.error('Không thể lấy vị trí. Vui lòng cho phép quyền truy cập vị trí.');
         setLocationLoading(false);
       },
@@ -235,7 +235,7 @@ const Checkout = () => {
         });
       }
     } catch (err) {
-      console.error('Lỗi định vị địa chỉ:', err);
+      // Silent catch
     } finally {
       setGeocoding(false);
     }
@@ -300,7 +300,7 @@ const Checkout = () => {
           targetWardName.current = '';
         }
       } catch (err) {
-        console.error('Lỗi tải dữ liệu hành chính:', err);
+        // Silent catch
         toast.error("Lỗi kết nối máy chủ địa chỉ. Vui lòng thử lại sau.");
       }
     };

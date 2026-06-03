@@ -72,7 +72,7 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress, provinces: init
         const data = await locationService.getProvinces();
         setProvinces(data || []);
       } catch (err) {
-        console.error('Lỗi tải tỉnh thành:', err);
+        // Silent catch
       }
     };
     if (isOpen) fetchProvinces();
@@ -242,7 +242,6 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress, provinces: init
         fullText
       });
     } catch (err) {
-      console.error(err);
       toast.error(err.response?.data?.message || 'Không thể lưu địa chỉ');
     } finally {
       setLoading(false);
