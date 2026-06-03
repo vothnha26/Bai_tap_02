@@ -136,12 +136,12 @@ const OrderSuccess = () => {
           {order.items.map((item, idx) => (
             <div key={idx} className="flex justify-between items-center text-sm">
               <span className="text-gray-300">{item.name} <span className="text-gray-500">x{item.quantity}</span></span>
-              <span className="text-white font-bold">{(item.price * item.quantity).toLocaleString()}đ</span>
+              <span className="text-white font-bold">{((item.price || 0) * (item.quantity || 0)).toLocaleString()}₫</span>
             </div>
           ))}
           <div className="border-t border-white/10 pt-4 flex justify-between items-center text-lg font-bold">
             <span className="text-white">Tổng thanh toán</span>
-            <span className="text-blue-400">{order.totalAmount.toLocaleString()}đ</span>
+            <span className="text-blue-400">{(order.totalAmount || 0).toLocaleString()}₫</span>
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ const OrderSuccess = () => {
         <Link to="/" className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-center hover:bg-blue-700 transition-all">
           Tiếp tục mua sắm
         </Link>
-        <Link to="/orders" className="flex-1 border border-white/10 text-white py-3 rounded-xl font-bold text-center hover:bg-white/5 transition-all">
+        <Link to="/profile?tab=orders" className="flex-1 border border-white/10 text-white py-3 rounded-xl font-bold text-center hover:bg-white/5 transition-all">
           Xem lịch sử đơn hàng
         </Link>
       </div>

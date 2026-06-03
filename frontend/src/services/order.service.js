@@ -5,8 +5,13 @@ const orderService = {
     return await apiClient.post('/orders', orderData);
   },
 
-  getUserOrders: async () => {
-    return await apiClient.get('/orders');
+  // Alias dùng trong Checkout.jsx
+  placeOrder: async (orderData) => {
+    return await apiClient.post('/orders', orderData);
+  },
+
+  getUserOrders: async (params = {}) => {
+    return await apiClient.get('/orders', { params });
   },
 
   getOrderById: async (id) => {

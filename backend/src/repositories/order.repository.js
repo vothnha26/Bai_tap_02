@@ -9,8 +9,27 @@ class OrderRepository {
     return await Order.findById(id).populate('userId', 'fullName email');
   }
 
-  async findByUserId(userId) {
-    return await Order.find({ userId }).sort({ createdAt: -1 });
+  async findByUserId(userId, options = {}) {
+    const { status, startDate, endDate, page = 1, limit = 10 } = options;
+    const query = { userId };
+
+    if (status && status !== 'ALL') {
+      query.status = status;
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    const total = await Order.countDocuments(query);
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return { orders, total, page: Number(page), limit: Number(limit) };
   }
 
   async updateStatus(id, status, cancellationReason = null, cancellationRejectionReason = null) {

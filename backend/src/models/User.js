@@ -6,7 +6,8 @@ const addressSchema = new mongoose.Schema({
   provinceCode: { type: String, required: true },
   ward: { type: String, required: true },
   wardCode: { type: String, required: true },
-  fullText: { type: String, required: true },
+  fullText: { type: String, default: '' },
+  phone: { type: String, default: '' },
   isDefault: { type: Boolean, default: false },
   coordinates: {
     lat: { type: Number, default: 10.8231 },

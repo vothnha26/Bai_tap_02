@@ -463,7 +463,7 @@ export default function PromotionFormModal({
                             onChange={() => handleToggleProductSelection(prod._id, 'selectableProducts')}
                             className="rounded text-blue-600"
                           />
-                          <span className="text-sm text-gray-700 font-medium truncate">{prod.name} ({prod.price.toLocaleString('vi-VN')}đ)</span>
+                          <span className="text-sm text-gray-700 font-medium truncate">{prod.name} ({prod.price.toLocaleString('vi-VN')}₫)</span>
                         </label>
                       ))}
                     </div>
@@ -480,7 +480,7 @@ export default function PromotionFormModal({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Giá trị đơn tối thiểu (đ)</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Giá trị đơn tối thiểu (₫)</label>
                 <input
                   type="number"
                   min="0"

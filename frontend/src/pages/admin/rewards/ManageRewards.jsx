@@ -371,7 +371,7 @@ export default function ManageRewards() {
                                   {matchedProd?.name || rule.productId?.name || 'Sản phẩm không xác định'}
                                 </div>
                                 <div className="text-[11px] font-bold text-gray-400 uppercase">
-                                  Price: {matchedProd?.price ? matchedProd.price.toLocaleString() + ' đ' : '-'}
+                                  Price: {matchedProd?.price ? matchedProd.price.toLocaleString() + ' ₫' : '-'}
                                 </div>
                               </div>
                             </div>
@@ -521,7 +521,7 @@ export default function ManageRewards() {
                   <option value="">-- Chọn sản phẩm --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.price?.toLocaleString()} đ)
+                      {p.name} ({p.price?.toLocaleString()} ₫)
                     </option>
                   ))}
                 </select>

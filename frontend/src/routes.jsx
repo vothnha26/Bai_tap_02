@@ -15,7 +15,6 @@ const Home = lazy(() => import("./pages/Home"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
-const Orders = lazy(() => import("./pages/Orders"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Search = lazy(() => import("./pages/Search"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -85,7 +84,6 @@ export const router = createBrowserRouter([
       { index: true, element: withSuspense(Home) },
       { path: "cart", element: withSuspense(Cart) },
       { path: "checkout", element: withSuspense(Checkout) },
-      { path: "orders", element: withSuspense(Orders) },
       { path: "order-success/:orderId", element: withSuspense(OrderSuccess) },
       { path: "product/:id", element: withSuspense(ProductDetail) },
       { path: "search", element: withSuspense(Search) },

@@ -56,7 +56,7 @@ class PromotionSeeder {
         name: 'Ưu đãi hè rực rỡ - Giảm 10% tổng đơn',
         type: 'DISCOUNT',
         conditions: {
-          minOrderAmount: 500000, // Đơn từ 500.000đ
+          minOrderAmount: 500000, // Đơn từ 500.000₫
           applicableProductIds: [],
           applicableCategoryIds: [],
           matchType: 'ANY_COMBINATION',
@@ -67,7 +67,7 @@ class PromotionSeeder {
           applyDiscountTo: 'ORDER_TOTAL',
           discountType: 'PERCENTAGE',
           discountValue: 10, // Giảm 10%
-          maxDiscountAmount: 150000 // Tối đa giảm 150.000đ
+          maxDiscountAmount: 150000 // Tối đa giảm 150.000₫
         },
         schedule: {
           startDate: new Date(`${startYear}-01-01T00:00:00`),
@@ -87,7 +87,7 @@ class PromotionSeeder {
       // Case 2: Giảm giá tiền mặt cố định cho đơn hàng
       {
         code: 'WELCOME50',
-        name: 'Chào mừng bạn mới - Giảm ngay 50.000đ',
+        name: 'Chào mừng bạn mới - Giảm ngay 50.000₫',
         type: 'DISCOUNT',
         conditions: {
           minOrderAmount: 200000,
@@ -233,7 +233,7 @@ class PromotionSeeder {
       // Case 6: Miễn phí vận chuyển (SHIPPING)
       {
         code: 'FREESHIP',
-        name: 'Miễn phí vận chuyển toàn quốc cho đơn hàng từ 1.000.000đ',
+        name: 'Miễn phí vận chuyển toàn quốc cho đơn hàng từ 1.000.000₫',
         type: 'SHIPPING',
         conditions: {
           minOrderAmount: 1000000,

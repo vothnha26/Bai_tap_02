@@ -18,7 +18,7 @@ export default function TierProgressBar({ currentPoints, tiers, currentTier }) {
           <h2 className="text-4xl font-black mt-4 mb-2">Hạng {currentTier?.name}</h2>
           <p className="text-white/80 font-bold max-w-xs">Bạn đã đạt đến cấp độ cao nhất. Hãy tận hưởng mọi đặc quyền VIP nhất của chúng tôi!</p>
           <div className="mt-8 flex items-baseline gap-2">
-            <span className="text-5xl font-black tabular-nums">{currentPoints.toLocaleString()}</span>
+            <span className="text-5xl font-black tabular-nums">{(currentPoints || 0).toLocaleString()}</span>
             <span className="text-xl font-bold opacity-60 uppercase">Điểm tích lũy</span>
           </div>
         </div>
@@ -40,14 +40,14 @@ export default function TierProgressBar({ currentPoints, tiers, currentTier }) {
             <span className="text-sm font-black text-blue-600 uppercase tracking-widest">Tiến trình hạng {nextTier.name}</span>
           </div>
           <h3 className="text-3xl font-black text-gray-900">
-            Còn <span className="text-blue-600 tabular-nums">{pointsToNext.toLocaleString()}</span> điểm
+            Còn <span className="text-blue-600 tabular-nums">{(pointsToNext || 0).toLocaleString()}</span> điểm
           </h3>
           <p className="text-gray-500 font-bold mt-1 text-lg">để thăng hạng tiếp theo</p>
         </div>
 
         <div className="text-right">
           <span className="text-sm font-bold text-gray-400 uppercase block mb-1">Tổng điểm hiện tại</span>
-          <span className="text-4xl font-black text-gray-900 tabular-nums">{currentPoints.toLocaleString()}</span>
+          <span className="text-4xl font-black text-gray-900 tabular-nums">{(currentPoints || 0).toLocaleString()}</span>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function TierProgressBar({ currentPoints, tiers, currentTier }) {
           </div>
           <div className="text-right">
             <span className="text-xs font-black inline-block text-gray-400 uppercase">
-              Mục tiêu: {nextTier.minPoints.toLocaleString()}
+              Mục tiêu: {(nextTier.minPoints || 0).toLocaleString()}
             </span>
           </div>
         </div>

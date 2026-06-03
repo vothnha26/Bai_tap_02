@@ -64,12 +64,12 @@ export default function RewardHistory({ logs }) {
                     log.pointsChanged >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {log.pointsChanged >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                    {log.pointsChanged > 0 ? '+' : ''}{log.pointsChanged.toLocaleString()}
+                    {log.pointsChanged > 0 ? '+' : ''}{(log.pointsChanged || 0).toLocaleString()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <span className="text-sm font-black text-gray-900 tabular-nums">
-                    {log.currentBalance.toLocaleString()}
+                    {(log.currentBalance || 0).toLocaleString()}
                   </span>
                 </td>
               </tr>

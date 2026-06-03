@@ -177,7 +177,7 @@ export default function AdminDashboard() {
                     </div>
                   </td>
                   <td className="px-6 py-4 font-medium">
-                    {product.price.toLocaleString('vi-VN')}₫
+                    {(product.price || 0).toLocaleString('vi-VN')}₫
                   </td>
                   <td className="px-6 py-4">
                     <span className={`font-medium ${product.stock < 10 ? 'text-red-600' : 'text-gray-600'}`}>

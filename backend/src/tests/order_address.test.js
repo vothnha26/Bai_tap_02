@@ -142,5 +142,94 @@ describe('Order Address Integration API', () => {
       expect(res.body.shippingAddress.coordinates.lat).toBe(0);
       expect(res.body.shippingAddress.coordinates.lng).toBe(0);
     });
+
+    it('should create order successfully with addressId (Multiple Addresses feature)', async () => {
+      // 1. Add address to user
+      const addressData = {
+        province: 'Hà Nội',
+        provinceCode: '01',
+        ward: 'Phường Dịch Vọng Hậu',
+        wardCode: '001',
+        street: '123 Xuân Thủy',
+        phone: '0912345678'
+      };
+      
+      const userWithAddr = await User.findById(user._id);
+      userWithAddr.addresses.push(addressData);
+      await userWithAddr.save();
+      const addressId = userWithAddr.addresses[0]._id;
+
+      // 2. Add item to cart
+      await request(app)
+        .post('/api/cart')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ productId: product._id, quantity: 1 });
+
+      // 3. Place order with addressId
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          addressId: addressId,
+          paymentMethod: 'COD',
+          note: 'Giao giờ hành chính'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.shippingAddress.province).toBe(addressData.province);
+      expect(res.body.shippingAddress.street).toBe(addressData.street);
+      expect(res.body.phone).toBe(addressData.phone);
+      expect(res.body.note).toBe('Giao giờ hành chính');
+    });
+
+    it('should create order successfully with newAddress object', async () => {
+      // 1. Add item to cart
+      await request(app)
+        .post('/api/cart')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ productId: product._id, quantity: 1 });
+
+      const newAddress = {
+        province: 'Đà Nẵng',
+        ward: 'Phường Hòa Hải',
+        street: '456 Ngũ Hành Sơn',
+        phone: '0905123456',
+        coordinates: { lat: 15.987, lng: 108.234 }
+      };
+
+      // 2. Place order with newAddress
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          newAddress: newAddress,
+          paymentMethod: 'COD'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.shippingAddress.province).toBe(newAddress.province);
+      expect(res.body.shippingAddress.street).toBe(newAddress.street);
+      expect(res.body.phone).toBe(newAddress.phone);
+      expect(res.body.shippingAddress.coordinates.lat).toBe(newAddress.coordinates.lat);
+    });
+
+    it('should return 400 if no address info is provided', async () => {
+      // 1. Add item to cart
+      await request(app)
+        .post('/api/cart')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ productId: product._id, quantity: 1 });
+
+      // 2. Place order without address
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          paymentMethod: 'COD'
+        });
+
+      expect(res.status).toBe(500); // Because it's caught by global error handler
+      expect(res.body.message).toContain('địa chỉ giao hàng');
+    });
   });
 });

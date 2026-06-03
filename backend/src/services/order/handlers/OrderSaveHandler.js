@@ -5,8 +5,21 @@ const { ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } = require('../../../utils
 
 class OrderSaveHandler extends OrderHandler {
   async handle(context) {
-    const { userId, orderInfo, orderItems, cart, finalAmount, discountAmount, giftItems, promotionCode, promotionInstance } = context;
-    const { shippingAddress, phone, note, paymentMethod = PAYMENT_METHOD.COD } = orderInfo;
+    const { 
+      userId, 
+      orderInfo, 
+      orderItems, 
+      cart, 
+      finalAmount, 
+      discountAmount, 
+      giftItems, 
+      promotionCode, 
+      promotionInstance,
+      shippingAddress, // resolved by AddressResolutionHandler
+      phone // resolved by AddressResolutionHandler
+    } = context;
+    
+    const { note, paymentMethod = PAYMENT_METHOD.COD } = orderInfo;
 
     // Chuẩn hóa địa chỉ để tương thích ngược với các client/test cũ gửi dạng String
     let addressObject;

@@ -20,8 +20,9 @@ class OrderController {
   async getUserOrders(req, res, next) {
     try {
       const userId = req.user.id;
-      const orders = await orderService.getUserOrders(userId);
-      res.status(200).json(orders);
+      const { status, startDate, endDate, page, limit } = req.query;
+      const result = await orderService.getUserOrders(userId, { status, startDate, endDate, page, limit });
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }

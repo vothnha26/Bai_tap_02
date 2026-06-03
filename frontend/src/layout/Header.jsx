@@ -35,7 +35,7 @@ export default function Header() {
                 Sản phẩm
               </Link>
               {user && (
-                <Link to="/orders" className="text-gray-700 hover:text-blue-600 transition font-medium">
+                <Link to="/profile?tab=orders" className="text-gray-700 hover:text-blue-600 transition font-medium">
                   Đơn hàng
                 </Link>
               )}

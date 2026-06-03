@@ -1,48 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate, Link } from 'react-router';
-import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Gift, Trash, Coins } from 'lucide-react';
+import { Truck, Phone, MapPin, CreditCard, ChevronRight, Package, ShieldCheck, AlertCircle, ShoppingBag, Tag, Trash, Coins, X, ArrowLeft, Loader2, Zap } from 'lucide-react';
 import orderService from '../services/order.service';
 import { promotionApi } from '../services/promotion.service';
+import locationService from '../services/location.service';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { getAddresses } from '../services/user.service';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+
+import CheckoutSkeleton from './Checkout/components/CheckoutSkeleton';
+import AddressSelector from './Checkout/components/AddressSelector';
+import OrderSummaryFocus from './Checkout/components/OrderSummaryFocus';
+import PromotionInput from './Checkout/components/PromotionInput';
 
 const Checkout = () => {
   const { cart, loading: cartLoading, clearCart, itemCount } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlacing, setIsPlacing] = useState(false);
+  
   const [formData, setFormData] = useState({
     phone: '',
     note: '',
-    paymentMethod: 'COD',
-    promotionCode: ''
+    paymentMethod: 'COD'
   });
 
-  // State cho multiple addresses
+  // Multiple addresses states
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isNewAddress, setIsNewAddress] = useState(false);
 
-  // Địa chỉ chi tiết và Bản đồ
+  // Address details & Map (API v2 - không còn quận/huyện)
   const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
-  
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedWard, setSelectedWard] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
-  const [coordinates, setCoordinates] = useState({ lat: 10.8231, lng: 106.6297 }); // Mặc định TP.HCM
+  const [coordinates, setCoordinates] = useState({ lat: 10.8231, lng: 106.6297 });
 
   // Map state
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [tempCoordinates, setTempCoordinates] = useState(null);
   const [tempAddress, setTempAddress] = useState('');
+  const [tempComponents, setTempComponents] = useState(null);
   const [geocoding, setGeocoding] = useState(false);
   const mapRef = useRef(null);
+
+  // Auto-mapping refs
+  const targetDistrictName = useRef('');
+  const targetWardName = useRef('');
 
   // Promotion states
   const [promotionCode, setPromotionCode] = useState('');
@@ -51,142 +64,175 @@ const Checkout = () => {
   const [promoError, setPromoError] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
 
-  // Lấy danh sách địa chỉ đã lưu của user
   useEffect(() => {
-    const loadAddresses = async () => {
+    if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
+      toast.error('Giỏ hàng của bạn đang trống');
+      navigate('/cart');
+    }
+  }, [cart, cartLoading, navigate]);
+
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Load initial data (Addresses, Provinces)
+  useEffect(() => {
+    const loadStaticData = async () => {
       try {
-        const res = await getAddresses();
-        const addrList = res.data?.addresses || res.addresses || res;
+        const [addrRes, provData] = await Promise.all([
+          getAddresses(),
+          locationService.getProvinces()
+        ]);
+
+        const addrList = addrRes.data?.addresses || addrRes.addresses || addrRes;
         setAddresses(addrList || []);
-        
-        if (addrList && addrList.length > 0) {
-          // Tìm địa chỉ mặc định
-          const defaultAddr = addrList.find(a => a.isDefault);
-          if (defaultAddr) {
-            setSelectedAddressId(defaultAddr._id);
-          } else {
-            setSelectedAddressId(addrList[0]._id);
-          }
-          setIsNewAddress(false);
+        setProvinces(provData || []);
+
+        if (addrList?.length > 0) {
+          const defaultAddr = addrList.find(a => a.isDefault) || addrList[0];
+          setSelectedAddressId(defaultAddr._id);
+          setFormData(prev => ({ ...prev, phone: defaultAddr.phone }));
         } else {
           setIsNewAddress(true);
+          if (user?.phone) setFormData(prev => ({ ...prev, phone: user.phone }));
         }
       } catch (err) {
-        console.error('Lỗi tải danh sách địa chỉ:', err);
-        setIsNewAddress(true);
+        console.error('Lỗi tải dữ liệu tĩnh:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        phone: user.phone || ''
-      }));
-      loadAddresses();
-    }
+    if (user) loadStaticData();
   }, [user]);
 
-  // Load danh sách tỉnh
+  // Load applicable promotions when cart items are ready
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const loadPromotions = async () => {
+      if (!cart?.items?.length) return;
       try {
-        const res = await axios.get('https://provinces.open-api.vn/api/v2/p/');
-        const data = res.data || [];
-        setProvinces(data);
-        
-        if (user?.address && typeof user.address === 'string' && !selectedProvince) {
-          const parts = user.address.split(',').map(p => p.trim());
-          const provinceName = parts[parts.length - 1];
-          const matched = findBestMatch(provinceName, data, 'province');
-          if (matched) setSelectedProvince(matched.code.toString());
-        }
+        const promoRes = await promotionApi.getApplicable(cart.items, 0);
+        setApplicablePromotions(promoRes.data || []);
       } catch (err) {
-        console.error('Lỗi tải danh sách tỉnh thành:', err);
+        console.error('Lỗi tải khuyến mãi:', err);
       }
     };
-    fetchProvinces();
-  }, [user]);
+    loadPromotions();
+  }, [cart?.items]);
 
-  // Load danh sách xã khi tỉnh thay đổi (API v2 loại bỏ cấp Quận/Huyện)
-  useEffect(() => {
-    if (!selectedProvince) {
-      setWards([]);
+  const handleApplyPromotion = async (codeOverride) => {
+    const codeToApply = codeOverride || promotionCode;
+    if (!codeToApply) return;
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const res = await promotionApi.apply(codeToApply, cart.items, 0);
+      setAppliedPromotion({
+        code: codeToApply,
+        discountAmount: res.data.discountAmount,
+        type: res.data.type
+      });
+      toast.success(`Đã áp dụng mã ${codeToApply}!`);
+    } catch (err) {
+      setPromoError(err.message || 'Mã khuyến mãi không hợp lệ');
+      setAppliedPromotion(null);
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!selectedAddressId && isNewAddress && (!selectedProvince || !selectedWard || !streetAddress || !formData.phone)) {
+      toast.error('Vui lòng nhập đầy đủ địa chỉ giao hàng (tỉnh, phường/xã, số nhà, số điện thoại)');
       return;
     }
-    const fetchWards = async () => {
-      try {
-        const res = await axios.get(`https://provinces.open-api.vn/api/v2/p/${selectedProvince}?depth=2`);
-        const data = res.data.wards || [];
-        setWards(data);
-        
-        if (user?.address && typeof user.address === 'string' && !selectedWard) {
-          const parts = user.address.split(',').map(p => p.trim());
-          for (let i = parts.length - 2; i >= 0; i--) {
-            const matched = findBestMatch(parts[i], data, 'ward');
-            if (matched) {
-              setSelectedWard(matched.code.toString());
-              break;
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Lỗi tải danh sách phường xã:', err);
-      }
-    };
-    fetchWards();
-  }, [selectedProvince, user]);
-
-  // Logic map Leaflet
-  useEffect(() => {
-    if (!isMapModalOpen) return;
     
-    const timer = setTimeout(() => {
-      if (!mapRef.current) return;
-      
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      });
-
-      const currentCoords = tempCoordinates || coordinates;
-      const map = L.map(mapRef.current).setView([currentCoords.lat, currentCoords.lng], 15);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-      let marker = L.marker([currentCoords.lat, currentCoords.lng], { draggable: true }).addTo(map);
-
-      map.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        marker.setLatLng([lat, lng]);
-        handleLocationSelect(lat, lng);
-      });
-
-      marker.on('dragend', (e) => {
-        const { lat, lng } = e.target.getLatLng();
-        handleLocationSelect(lat, lng);
-      });
-      
-      return () => {
-        map.remove();
+    setIsPlacing(true);
+    try {
+      const orderData = {
+        paymentMethod: formData.paymentMethod,
+        note: formData.note,
+        promotionCode: appliedPromotion?.code || null
       };
-    }, 200);
 
-    return () => clearTimeout(timer);
-  }, [isMapModalOpen]);
+      if (isNewAddress) {
+        orderData.newAddress = {
+          province: provinces.find(p => p.code.toString() === selectedProvince)?.name || '',
+          ward: wards.find(w => w.code.toString() === selectedWard)?.name || '',
+          street: streetAddress,
+          phone: formData.phone,
+          coordinates
+        };
+      } else {
+        orderData.addressId = selectedAddressId;
+      }
 
-  const handleLocationSelect = async (lat, lng) => {
-    setTempCoordinates({ lat, lng });
+      const res = await orderService.placeOrder(orderData);
+      clearCart();
+      toast.success('Đặt hàng thành công!');
+      navigate(`/order-success?id=${res.data.id || res.data._id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng');
+    } finally {
+      setIsPlacing(false);
+    }
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Trình duyệt của bạn không hỗ trợ định vị');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newCoords = { lat: latitude, lng: longitude };
+        
+        setTempCoordinates(newCoords);
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 18);
+          // Find the marker and update it
+          mapRef.current.eachLayer((layer) => {
+            if (layer instanceof L.Marker) layer.setLatLng([latitude, longitude]);
+          });
+        }
+        reverseGeocode(latitude, longitude);
+        setLocationLoading(false);
+        toast.success('Đã xác định vị trí hiện tại');
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error('Không thể lấy vị trí. Vui lòng cho phép quyền truy cập vị trí.');
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  // Normalize tên hành chính VN: bỏ prefix Tỉnh/Thành phố/Phường/Xã/Quận...
+  const normalizeAdminName = (str = '') =>
+    str
+      .toLowerCase()
+      .replace(/^(thành phố|tp\.?|tỉnh|quận|huyện|thị xã|phường|xã|thị trấn|khu phố)\s+/i, '')
+      .trim();
+
+  // Map logic functions
+  const reverseGeocode = async (lat, lng) => {
     setGeocoding(true);
     try {
-      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'vi' }
-      });
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`
+      );
       if (res.data) {
+        const addr = res.data.address;
         setTempAddress(res.data.display_name);
+
+        // VN Nominatim: state = tỉnh/thành, city = quận/thành phố con, suburb/quarter = phường
+        setTempComponents({
+          province: addr.state || addr.province || addr.city || '',
+          district: addr.city || addr.city_district || addr.county || addr.district || addr.suburb || '',
+          ward: addr.quarter || addr.neighbourhood || addr.suburb || addr.village || ''
+        });
       }
     } catch (err) {
       console.error('Lỗi định vị địa chỉ:', err);
@@ -195,688 +241,450 @@ const Checkout = () => {
     }
   };
 
-  const cleanName = (name) => {
-    if (!name) return '';
-    return name.toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/^(tinh|thanh pho|quan|huyen|thi xa|thi tran|phuong|xa|duong|district|city|province|ward|county|suburb|quarter|neighbourhood|village|town)\s+/gi, '')
-      .replace(/\s+(tinh|thanh pho|quan|huyen|thi xa|thi tran|phuong|xa|duong|district|city|province|ward|county|suburb|quarter|neighbourhood|village|town)$/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
+  const handleMapConfirm = () => {
+    if (tempCoordinates && tempComponents) {
+      setCoordinates(tempCoordinates);
+      setStreetAddress(tempAddress);
 
-  const findBestMatch = (osmName, list, type = 'district') => {
-    if (!osmName || !list || list.length === 0) return null;
-    const cleanOSM = cleanName(osmName);
-    
-    const exactMatch = list.find(item => cleanName(item.name) === cleanOSM);
-    if (exactMatch) return exactMatch;
-    
-    const subMatch = list.find(item => {
-      const cleanItem = cleanName(item.name);
-      return cleanOSM.includes(cleanItem) || cleanItem.includes(cleanOSM);
-    });
-    if (subMatch) return subMatch;
+      const normProvince = normalizeAdminName(tempComponents.province);
 
-    if (type === 'district' && (cleanOSM.includes('thu duc') || cleanOSM === '2' || cleanOSM === '9')) {
-      return list.find(item => cleanName(item.name).includes('thu duc'));
-    }
-
-    return null;
-  };
-
-  const confirmMapSelection = async () => {
-    if (!tempCoordinates) return;
-    
-    setCoordinates(tempCoordinates);
-    setIsMapModalOpen(false);
-
-    try {
-      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempCoordinates.lat}&lon=${tempCoordinates.lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'vi' }
+      // Match tỉnh/thành: normalize cả 2 phía trước khi so sánh
+      const matchedProv = provinces.find((p) => {
+        const normP = normalizeAdminName(p.name);
+        return normP === normProvince ||
+          normP.includes(normProvince) ||
+          normProvince.includes(normP);
       });
-      
-      if (res.data && res.data.address) {
-        const addr = res.data.address;
-        const displayName = res.data.display_name || '';
-        
-        // 1. Match Tỉnh/Thành phố
-        const osmProvince = addr.city || addr.state || addr.province || addr.city_district || '';
-        let matchedProv = findBestMatch(osmProvince, provinces, 'province');
-        
-        if (!matchedProv) {
-          const parts = displayName.split(',').map(p => p.trim());
-          for (const part of parts.slice(-3)) {
-            matchedProv = findBestMatch(part, provinces, 'province');
-            if (matchedProv) break;
-          }
-        }
-        
-        if (matchedProv) {
-          const provCode = matchedProv.code.toString();
-          setSelectedProvince(provCode);
-          
-          const wardRes = await axios.get(`https://provinces.open-api.vn/api/v2/p/${provCode}?depth=2`);
-          const tempWards = wardRes.data.wards || [];
-          setWards(tempWards);
-          
-          // 2. Match Phường/Xã
-          const osmWardCandidates = [addr.ward, addr.quarter, addr.suburb, addr.village, addr.town, addr.neighbourhood];
-          let matchedWard = null;
-          
-          for (const candidate of osmWardCandidates) {
-            if (!candidate) continue;
-            matchedWard = findBestMatch(candidate, tempWards, 'ward');
-            if (matchedWard) break;
-          }
-          
-          if (!matchedWard) {
-            const parts = displayName.split(',').map(p => p.trim());
-            for (const part of parts.slice(0, 4)) {
-              matchedWard = findBestMatch(part, tempWards, 'ward');
-              if (matchedWard) break;
-            }
-          }
-          
-          if (matchedWard) {
-            setSelectedWard(matchedWard.code.toString());
-          }
-        }
-        
-        const streetParts = [];
-        if (addr.house_number) streetParts.push(addr.house_number);
-        if (addr.road) streetParts.push(addr.road);
-        
-        if (streetParts.length > 0) {
-          setStreetAddress(streetParts.join(' '));
-        } else {
-          const firstPart = displayName.split(',')[0] || '';
-          const isGeneric = ['phuong', 'quan', 'thanh pho', 'huyen', 'xa'].some(k => firstPart.toLowerCase().includes(k));
-          if (!isGeneric) {
-            setStreetAddress(firstPart);
-          }
-        }
+
+      if (matchedProv) {
+        setSelectedProvince(matchedProv.code.toString());
+        // Lưu cả district và ward để useEffect fetchWards dùng
+        targetDistrictName.current = tempComponents.district;
+        targetWardName.current = tempComponents.ward;
+      } else {
+        toast.error('Không tìm được tỉnh/thành tương ứng. Vui lòng chọn thủ công.');
       }
-    } catch (err) {
-      console.error('Lỗi phân tích địa chỉ:', err);
+
+      setIsMapModalOpen(false);
+      toast.success('Đã cập nhật vị trí — đang tự động điền thông tin...');
     }
   };
 
-  const openMapModal = () => {
-    setIsMapModalOpen(true);
-    setTempAddress('Đang xác định vị trí hiện tại...');
-    setGeocoding(true);
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const coords = { lat: latitude, lng: longitude };
-          setTempCoordinates(coords);
-          handleLocationSelect(latitude, longitude);
-        },
-        (error) => {
-          console.warn('Không lấy được vị trí GPS, dùng vị trí mặc định:', error);
-          setTempCoordinates(coordinates);
-          handleLocationSelect(coordinates.lat, coordinates.lng);
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    } else {
-      setTempCoordinates(coordinates);
-      handleLocationSelect(coordinates.lat, coordinates.lng);
-    }
-  };
-
+  // Fetch wards khi province thay đổi (API v2 — Flattened view, bỏ qua bước chọn Quận)
   useEffect(() => {
-    if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
-      navigate('/cart');
-    }
-  }, [cart, cartLoading, navigate]);
-
-  useEffect(() => {
-    if (cart && cart.items && cart.items.length > 0) {
-      fetchApplicablePromotions();
-    }
-  }, [cart]);
-
-  const fetchApplicablePromotions = async () => {
-    try {
-      const res = await promotionApi.getApplicable(cart.items, 0);
-      setApplicablePromotions(res.data);
-    } catch (err) {
-      console.error('Error fetching applicable promotions:', err);
-    }
-  };
-
-  const handleApplyPromotion = async (codeToApply) => {
-    const code = codeToApply || promotionCode;
-    if (!code) return;
-
-    setPromoLoading(true);
-    setPromoError('');
-    try {
-      const res = await promotionApi.apply(code, cart.items, 0);
-      setAppliedPromotion(res.data);
-      setFormData(prev => ({ ...prev, promotionCode: res.data.code }));
-    } catch (err) {
-      setPromoError(err.response?.data?.message || 'Không thể áp dụng mã khuyến mãi này');
-      setAppliedPromotion(null);
-      setFormData(prev => ({ ...prev, promotionCode: '' }));
-    } finally {
-      setPromoLoading(false);
-    }
-  };
-
-  const handleCancelPromotion = () => {
-    setAppliedPromotion(null);
-    setPromotionCode('');
-    setPromoError('');
-    setFormData(prev => ({ ...prev, promotionCode: '' }));
-  };
-
-  if (cartLoading || !cart || !cart.items || cart.items.length === 0) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    let shippingAddress;
-
-    if (isNewAddress) {
-      if (!selectedProvince || !selectedWard || !streetAddress.trim()) {
-        alert('Vui lòng nhập đầy đủ thông tin địa chỉ nhận hàng (Tỉnh/Thành phố, Phường/Xã và Số nhà/Tên đường).');
-        setLoading(false);
+    const fetchWards = async () => {
+      if (!selectedProvince) {
+        setWards([]);
         return;
       }
-      shippingAddress = {
-        province: provinces.find(p => p.code.toString() === selectedProvince)?.name || '',
-        district: '',
-        ward: wards.find(w => w.code.toString() === selectedWard)?.name || '',
-        street: streetAddress.trim(),
-        coordinates: coordinates
-      };
-    } else {
-      const selectedAddr = addresses.find(a => a._id === selectedAddressId);
-      if (!selectedAddr) {
-        alert('Vui lòng chọn địa chỉ nhận hàng!');
-        setLoading(false);
-        return;
-      }
-      shippingAddress = {
-        province: selectedAddr.province,
-        district: '',
-        ward: selectedAddr.ward,
-        street: selectedAddr.street,
-        coordinates: selectedAddr.coordinates || { lat: 10.8231, lng: 106.6297 }
-      };
-    }
+      try {
+        const data = await locationService.getWards(selectedProvince);
+        const wardsList = data || [];
+        setWards(wardsList);
 
-    const orderPayload = {
-      ...formData,
-      shippingAddress
+        // Auto-map phường từ bản đồ (không cần quận trung gian)
+        if (targetWardName.current) {
+          const normWard = normalizeAdminName(targetWardName.current);
+
+          const matchedWard = wardsList.find((w) => {
+            const normW = normalizeAdminName(w.name);
+            return normW === normWard ||
+              normW.includes(normWard) ||
+              normWard.includes(normW);
+          });
+
+          if (matchedWard) setSelectedWard(matchedWard.code.toString());
+
+          // Reset sau khi đã dùng
+          targetDistrictName.current = '';
+          targetWardName.current = '';
+        }
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu hành chính:', err);
+        toast.error("Lỗi kết nối máy chủ địa chỉ. Vui lòng thử lại sau.");
+      }
     };
+    fetchWards();
+  }, [selectedProvince]);
 
-    try {
-      const order = await orderService.createOrder(orderPayload);
-      await clearCart(); 
-      navigate(`/order-success/${order.id}`);
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (isMapModalOpen && !mapRef.current) {
+      setTimeout(() => {
+        const container = document.getElementById('checkout-map');
+        if (!container) return;
+
+        const map = L.map(container).setView([coordinates.lat, coordinates.lng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        const marker = L.marker([coordinates.lat, coordinates.lng], { draggable: true }).addTo(map);
+
+        marker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          setTempCoordinates({ lat: pos.lat, lng: pos.lng });
+          reverseGeocode(pos.lat, pos.lng);
+        });
+
+        map.on('click', (e) => {
+          marker.setLatLng(e.latlng);
+          setTempCoordinates({ lat: e.latlng.lat, lng: e.latlng.lng });
+          reverseGeocode(e.latlng.lat, e.latlng.lng);
+        });
+
+        mapRef.current = map;
+        setTempCoordinates(coordinates);
+        reverseGeocode(coordinates.lat, coordinates.lng);
+      }, 100);
     }
-  };
 
-  const discountAmount = appliedPromotion ? appliedPromotion.discountAmount : 0;
-  const finalAmount = Math.max(0, cart.totalAmount - discountAmount);
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [isMapModalOpen]);
+
+  if (isLoading || cartLoading) return <CheckoutSkeleton />;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link to="/cart" className="hover:text-primary transition-colors">Giỏ hàng</Link>
-        <ChevronRight className="w-4 h-4" />
-        <span className="text-foreground font-bold">Thanh toán</span>
-      </div>
-
-      <h1 className="text-4xl font-black mb-10 text-foreground flex items-center gap-4">
-        <div className="p-3 bg-primary/10 rounded-2xl text-primary">
-          <ShoppingBag className="w-8 h-8" />
-        </div>
-        Thanh toán đơn hàng
-      </h1>
-      
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-8">
-          {/* Thông tin giao hàng */}
-          <div className="bg-white dark:bg-card p-8 rounded-3xl border border-border shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                <Truck className="w-5 h-5" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground">Thông tin giao hàng</h2>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+      {/* Focus Mode Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 py-6 mb-12 sticky top-0 z-50 backdrop-blur-md bg-white/80">
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+          <Link to="/cart" className="flex items-center gap-3 text-slate-400 hover:text-blue-600 transition-all group">
+            <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-blue-50">
+               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             </div>
+            <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Quay lại giỏ hàng</span>
+          </Link>
+          <div className="text-center">
+             <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Thanh toán</h1>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">An toàn • Bảo mật • Nhanh chóng</p>
+          </div>
+          <div className="w-24 hidden sm:block" /> {/* Spacer */}
+        </div>
+      </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 flex flex-col">
-                <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  Số điện thoại nhận hàng
-                </label>
-                <input
-                  type="text"
-                  name="phone"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                  placeholder="Nhập số điện thoại của bạn"
-                  autoComplete="tel"
-                />
-              </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+          {/* Left Column: Form Sections */}
+          <div className="lg:col-span-2 space-y-12">
+            
+            {/* Address Section */}
+            <section className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <AddressSelector 
+                addresses={addresses}
+                selectedId={selectedAddressId}
+                onSelect={(id) => {
+                  setSelectedAddressId(id);
+                  setIsNewAddress(false);
+                  const addr = addresses.find(a => a._id === id);
+                  if (addr) setFormData(prev => ({ ...prev, phone: addr.phone }));
+                }}
+                onAddNew={() => {
+                  setIsNewAddress(true);
+                  setSelectedAddressId('');
+                  if (user?.phone) setFormData(prev => ({ ...prev, phone: user.phone }));
+                }}
+                isNewAddress={isNewAddress}
+              />
 
-              {/* Multiple Addresses Selection */}
-              {addresses.length > 0 && (
-                <div className="md:col-span-2 space-y-3">
-                  <label className="text-sm font-bold text-foreground block mb-2">Chọn địa chỉ nhận hàng</label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {addresses.map((addr) => (
-                      <label 
-                        key={addr._id} 
-                        className={`flex items-start p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                          !isNewAddress && selectedAddressId === addr._id 
-                            ? 'border-primary bg-primary/5 shadow-sm' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="mt-1 flex items-center justify-center">
-                          <input
-                            type="radio"
-                            name="checkoutAddress"
-                            checked={!isNewAddress && selectedAddressId === addr._id}
-                            onChange={() => {
-                              setSelectedAddressId(addr._id);
-                              setIsNewAddress(false);
-                            }}
-                            className="w-4 h-4 text-primary focus:ring-primary/20"
-                          />
-                        </div>
-                        <div className="ml-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground text-sm capitalize">{addr.street}</span>
-                            {addr.isDefault && (
-                              <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-black uppercase rounded">
-                                Mặc định
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-muted-foreground text-xs mt-1">{addr.fullText}</p>
-                        </div>
-                      </label>
-                    ))}
+              <AnimatePresence>
+                {isNewAddress && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-10 pt-10 border-t border-slate-50 dark:border-slate-800"
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                       <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Cấu hình địa chỉ mới</p>
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         onClick={() => setIsMapModalOpen(true)}
+                         className="rounded-xl font-black uppercase text-[9px] tracking-widest text-emerald-600 hover:bg-emerald-50"
+                       >
+                         <MapPin className="w-3.5 h-3.5 mr-1.5" /> Chọn từ bản đồ
+                       </Button>
+                    </div>
 
-                    <label 
-                      className={`flex items-start p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                        isNewAddress 
-                          ? 'border-primary bg-primary/5 shadow-sm' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="mt-1 flex items-center justify-center">
-                        <input
-                          type="radio"
-                          name="checkoutAddress"
-                          checked={isNewAddress}
-                          onChange={() => setIsNewAddress(true)}
-                          className="w-4 h-4 text-primary focus:ring-primary/20"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Số điện thoại nhận hàng</label>
+                        <input 
+                          type="text" 
+                          value={formData.phone}
+                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="Ví dụ: 0912345678"
+                          className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-bold"
                         />
                       </div>
-                      <div className="ml-3">
-                        <span className="font-bold text-foreground text-sm">Nhập địa chỉ mới</span>
-                        <p className="text-muted-foreground text-xs mt-1">Sử dụng địa chỉ nhận hàng khác chưa được lưu</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Tỉnh / Thành phố</label>
+                        <select 
+                          value={selectedProvince}
+                          onChange={(e) => { setSelectedProvince(e.target.value); setSelectedWard(''); }}
+                          className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-bold appearance-none"
+                        >
+                          <option value="">Chọn tỉnh thành</option>
+                          {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+                        </select>
                       </div>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {isNewAddress && (
-                <>
-                  {/* Tích hợp ghim bản đồ trực quan */}
-                  <div className="md:col-span-2 flex justify-between items-center bg-primary/5 p-5 rounded-2xl border border-primary/10">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
-                        <MapPin className="w-5 h-5" />
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Phường / Xã</label>
+                        <select 
+                          value={selectedWard}
+                          disabled={!selectedProvince}
+                          onChange={(e) => setSelectedWard(e.target.value)}
+                          className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-bold appearance-none disabled:opacity-50"
+                        >
+                          <option value="">Chọn phường xã</option>
+                          {wards.map(w => <option key={w.code} value={w.code}>{w.name}</option>)}
+                        </select>
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-foreground">Bạn muốn ghim vị trí trên bản đồ?</p>
-                        <p className="text-xs text-muted-foreground font-medium">Tự động điền địa chỉ & định vị tọa độ giao hàng chính xác</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Địa chỉ chi tiết (Số nhà, tên đường)</label>
+                        <input 
+                          type="text" 
+                          value={streetAddress}
+                          onChange={(e) => setStreetAddress(e.target.value)}
+                          placeholder="Ví dụ: 123 Đường ABC"
+                          className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-bold"
+                        />
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={openMapModal}
-                      className="bg-primary hover:bg-primary/95 text-white text-xs font-black px-4 py-3 rounded-xl flex items-center gap-1.5 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                    >
-                      🗺️ Ghim bản đồ
-                    </button>
-                  </div>
-
-                  {/* Dropdowns địa chỉ 3 cấp */}
-                  <div className="space-y-2 flex flex-col">
-                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
-                      Tỉnh / Thành phố <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required={isNewAddress}
-                      value={selectedProvince}
-                      onChange={(e) => {
-                        setSelectedProvince(e.target.value);
-                        setSelectedWard('');
-                      }}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-semibold"
-                    >
-                      <option value="">Chọn Tỉnh / Thành phố</option>
-                      {provinces.map(p => (
-                        <option key={p.code} value={p.code}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2 flex flex-col">
-                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
-                      Phường / Xã / Thị trấn <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required={isNewAddress}
-                      disabled={!selectedProvince}
-                      value={selectedWard}
-                      onChange={(e) => setSelectedWard(e.target.value)}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all disabled:opacity-50 text-sm font-semibold"
-                    >
-                      <option value="">Chọn Phường / Xã</option>
-                      {wards.map(w => (
-                        <option key={w.code} value={w.code}>{w.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2 flex flex-col">
-                    <label className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-1">
-                      Số nhà, ngõ, tên đường <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required={isNewAddress}
-                      value={streetAddress}
-                      onChange={(e) => setStreetAddress(e.target.value)}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-semibold"
-                      placeholder="Ví dụ: Số 97 Man Thiện"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="md:col-span-2 space-y-2 flex flex-col">
-                <label className="text-sm font-bold text-foreground mb-1">Ghi chú (tùy chọn)</label>
-                <input
-                  type="text"
-                  name="note"
-                  value={formData.note}
-                  onChange={handleChange}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                  placeholder="Lời nhắn cho shipper (ví dụ: Giao giờ hành chính)"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Phương thức thanh toán */}
-          <div className="bg-white dark:bg-card p-8 rounded-3xl border border-border shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground">Phương thức thanh toán</h2>
-            </div>
-
-            <div className="space-y-4">
-              <label className={`flex items-center p-6 border-2 rounded-2xl cursor-pointer transition-all ${
-                formData.paymentMethod === 'COD' 
-                  ? 'border-primary bg-primary/5 shadow-md' 
-                  : 'border-border hover:border-primary/50'
-              }`}>
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                  formData.paymentMethod === 'COD' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                }`}>
-                  {formData.paymentMethod === 'COD' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
-                </div>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="COD"
-                  checked={formData.paymentMethod === 'COD'}
-                  onChange={handleChange}
-                  className="hidden"
-                />
-                <div className="ml-4">
-                  <p className="text-foreground font-black uppercase text-sm tracking-wide">Thanh toán khi nhận hàng (COD)</p>
-                  <p className="text-muted-foreground text-xs mt-1">Phí thu hộ 0đ • Kiểm tra hàng trước khi trả tiền</p>
-                </div>
-              </label>
-              
-              <div className="flex items-center p-6 border-2 border-dashed border-border rounded-2xl opacity-40 grayscale cursor-not-allowed">
-                <div className="w-6 h-6 rounded-full border-2 border-muted-foreground" />
-                <div className="ml-4">
-                  <p className="text-foreground font-black uppercase text-sm tracking-wide">Ví điện tử / Ngân hàng (MoMo, VNPAY)</p>
-                  <p className="text-muted-foreground text-xs mt-1">Sắp ra mắt trong phiên bản tới</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-600">
-            <ShieldCheck className="w-6 h-6 shrink-0" />
-            <p className="text-sm font-medium">Mọi giao dịch trên PubliCast đều được bảo mật tuyệt đối 100%.</p>
-          </div>
-        </div>
-
-        {/* Tóm tắt đơn hàng */}
-        <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-card p-8 rounded-3xl border border-border shadow-xl sticky top-24">
-            <h2 className="text-xl font-black mb-8 text-foreground border-b border-border pb-4 uppercase tracking-tighter">Đơn hàng của bạn ({itemCount})</h2>
-            
-            <div className="max-h-80 overflow-y-auto mb-8 space-y-5 pr-2 custom-scrollbar">
-              {cart.items.map((item) => (
-                <div key={item.productId} className="flex gap-4 items-center group">
-                  <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-border shadow-sm">
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-black w-5 h-5 rounded-bl-lg flex items-center justify-center shadow-lg">
-                      {item.quantity}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-foreground text-sm font-bold truncate">{item.name}</p>
-                    <p className="text-muted-foreground text-xs font-medium">Đơn giá: {item.price.toLocaleString()}đ</p>
-                  </div>
-                  <p className="text-foreground text-sm font-black">{(item.price * item.quantity).toLocaleString()}đ</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Khung áp dụng khuyến mãi */}
-            <div className="border-t border-border pt-6 mb-6">
-              <label className="text-xs font-bold text-foreground uppercase tracking-widest block mb-2 flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-primary" /> Mã giảm giá / Quà tặng
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  disabled={appliedPromotion}
-                  value={promotionCode}
-                  onChange={(e) => setPromotionCode(e.target.value)}
-                  className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-foreground font-mono font-bold focus:ring-2 focus:ring-primary/20 outline-none uppercase text-sm"
-                  placeholder="NHẬP VOUCHER"
-                />
-                {appliedPromotion ? (
-                  <Button type="button" variant="destructive" onClick={handleCancelPromotion} className="rounded-xl px-4 font-bold h-10">Hủy</Button>
-                ) : (
-                  <Button type="button" onClick={() => handleApplyPromotion()} disabled={promoLoading || !promotionCode} className="rounded-xl px-4 font-bold h-10">Áp dụng</Button>
+                  </motion.div>
                 )}
-              </div>
-              {promoError && <p className="text-xs text-red-500 font-semibold mt-1">{promoError}</p>}
-              {appliedPromotion && <p className="text-xs text-emerald-600 font-bold mt-1.5">Đã áp dụng: {appliedPromotion.name}</p>}
+              </AnimatePresence>
+            </section>
 
-              {/* Quà tặng đính kèm */}
-              {appliedPromotion && appliedPromotion.giftItems && appliedPromotion.giftItems.length > 0 && (
-                <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-2">
-                  <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1"><Gift className="w-3 h-3" /> Quà tặng đi kèm:</p>
-                  {appliedPromotion.giftItems.map((gift, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
-                      <img src={gift.imageUrl} alt={gift.name} className="w-8 h-8 object-cover rounded-lg border shadow-sm" />
-                      <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 truncate flex-1">{gift.name}</div>
-                      <div className="text-[11px] font-bold text-gray-900 dark:text-white">x{gift.quantity}</div>
+            {/* Payment Method Section */}
+            <section className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-8">Phương thức thanh toán</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { id: 'COD', label: 'Tiền mặt (COD)', icon: Truck, desc: 'Thanh toán khi nhận hàng' },
+                  { id: 'BANK_TRANSFER', label: 'Chuyển khoản', icon: CreditCard, desc: 'Quét mã QR hoặc ATM' }
+                ].map((method) => (
+                  <label 
+                    key={method.id}
+                    className={`relative p-6 rounded-[2rem] border cursor-pointer transition-all duration-500 flex flex-col gap-4 ${
+                      formData.paymentMethod === method.id 
+                        ? 'bg-blue-50/50 border-blue-600 dark:bg-blue-900/10 shadow-lg shadow-blue-600/5' 
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-blue-200'
+                    }`}
+                  >
+                    <input 
+                      type="radio" 
+                      className="hidden" 
+                      name="paymentMethod" 
+                      value={method.id}
+                      checked={formData.paymentMethod === method.id}
+                      onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                    />
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                      formData.paymentMethod === method.id ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'
+                    }`}>
+                      <method.icon className="w-6 h-6" />
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Danh sách Voucher khả dụng */}
-              {applicablePromotions.length > 0 && !appliedPromotion && (
-                <div className="mt-4">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase mb-2">Voucher khả dụng:</p>
-                  <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                    {applicablePromotions.map((promo) => (
-                      <div 
-                        key={promo._id} 
-                        onClick={() => { setPromotionCode(promo.code); handleApplyPromotion(promo.code); }}
-                        className="p-2 border border-dashed border-border rounded-xl flex items-center justify-between cursor-pointer hover:bg-primary/5 hover:border-primary transition group"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="font-bold text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase">{promo.code}</span>
-                          <p className="text-[10px] text-gray-500 font-semibold mt-1 truncate">{promo.name}</p>
-                        </div>
-                        <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition whitespace-nowrap ml-2">Áp dụng</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4 mb-8 pt-6 border-t border-border">
-              <div className="flex justify-between text-muted-foreground text-sm font-medium">
-                <span>Tạm tính</span>
-                <span className="text-foreground">{cart.totalAmount.toLocaleString()}đ</span>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{method.label}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{method.desc}</p>
+                    </div>
+                    {formData.paymentMethod === method.id && (
+                       <div className="absolute top-6 right-6 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                          <Check className="w-3 h-3 stroke-[4px]" />
+                       </div>
+                    )}
+                  </label>
+                ))}
               </div>
-              
-              {appliedPromotion && (
-                <div className="flex justify-between text-emerald-600 text-sm font-bold">
-                  <span>Giảm giá</span>
-                  <span>-{discountAmount.toLocaleString()}đ</span>
-                </div>
-              )}
+            </section>
 
-              <div className="flex justify-between text-muted-foreground text-sm font-medium">
-                <span>Phí vận chuyển</span>
-                <span className="text-green-600 font-black italic">Miễn phí</span>
-              </div>
-
-              {cart.totalRewardPoints > 0 && (
-                <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-4 rounded-2xl my-2">
-                  <span className="text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-emerald-600 animate-pulse" />
-                    Điểm thưởng tích lũy
-                  </span>
-                  <span className="text-emerald-800 dark:text-emerald-300 font-black text-sm">+{cart.totalRewardPoints} pts</span>
-                </div>
-              )}
-
-              <div className="h-px bg-border my-2" />
-              <div className="flex justify-between items-end">
-                <span className="text-muted-foreground text-xs font-black uppercase tracking-widest">Tổng cộng</span>
-                <span className="text-3xl font-black text-primary leading-none tracking-tighter">{finalAmount.toLocaleString()}đ</span>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/30 border-t-white"></div>
-              ) : (
-                'Hoàn tất đặt hàng'
-              )}
-            </Button>
-
-            <p className="text-center text-[10px] text-muted-foreground mt-6 uppercase font-bold tracking-widest">
-              Nhấn "Hoàn tất" đồng nghĩa bạn đồng ý với điều khoản của chúng tôi
-            </p>
-          </div>
-        </div>
-      </form>
-
-      {/* Map selection Modal */}
-      {isMapModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-card w-full max-w-3xl rounded-3xl border border-border overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/10">
-              <div>
-                <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" /> Ghim vị trí nhận hàng
+            {/* Note & Promotion Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <section className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-8 flex items-center gap-2">
+                   Ghi chú đơn hàng
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5 font-medium">Click chuột hoặc kéo ghim để định vị chính xác vị trí nhận hàng</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setIsMapModalOpen(false)}
-                className="text-foreground hover:text-primary transition-colors text-lg font-bold w-8 h-8 flex items-center justify-center hover:bg-muted rounded-full cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <div className="flex-1 relative min-h-[350px] md:min-h-[450px]">
-              <div ref={mapRef} className="absolute inset-0 z-10 w-full h-full" />
-              {geocoding && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-background/90 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-lg flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  Đang xác định địa chỉ...
-                </div>
-              )}
-            </div>
+                <textarea 
+                  value={formData.note}
+                  onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="Lời nhắn cho shipper hoặc shop..."
+                  className="flex-1 w-full p-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-[2rem] focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-medium resize-none min-h-[120px]"
+                />
+              </section>
 
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-border bg-muted/5 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-              <div className="text-xs font-bold text-foreground bg-muted/40 p-3.5 rounded-2xl border border-border flex-1">
-                <span className="text-muted-foreground block mb-0.5 uppercase tracking-widest text-[9px]">Địa chỉ định vị:</span>
-                {tempAddress || "Chưa có vị trí được chọn"}
-              </div>
-              <div className="flex gap-3 shrink-0">
-                <Button type="button" variant="outline" onClick={() => setIsMapModalOpen(false)} className="rounded-xl font-bold h-11 px-5">Hủy</Button>
-                <Button type="button" onClick={confirmMapSelection} disabled={!tempAddress || geocoding} className="rounded-xl font-bold h-11 px-5">Xác nhận vị trí</Button>
-              </div>
+              <section className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                <PromotionInput 
+                  code={promotionCode}
+                  setCode={setPromotionCode}
+                  onApply={handleApplyPromotion}
+                  isLoading={promoLoading}
+                  error={promoError}
+                  applied={!!appliedPromotion}
+                  onRemove={() => {
+                    setAppliedPromotion(null);
+                    setPromotionCode('');
+                  }}
+                  applicablePromotions={applicablePromotions}
+                  onQuickApply={(code) => {
+                    setPromotionCode(code);
+                    handleApplyPromotion(code);
+                  }}
+                />
+              </section>
             </div>
           </div>
+
+          {/* Right Column: Summary Sticky */}
+          <aside className="lg:col-span-1">
+             <OrderSummaryFocus 
+               cart={cart}
+               itemCount={itemCount}
+               onPlaceOrder={handlePlaceOrder}
+               isPlacing={isPlacing}
+               appliedPromotion={appliedPromotion}
+             />
+          </aside>
         </div>
-      )}
+      </main>
+
+      {/* Map Modal - Liquid Glass */}
+      <AnimatePresence>
+        {isMapModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-10">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setIsMapModalOpen(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[3rem] shadow-2xl border border-white/20 relative z-10 overflow-hidden flex flex-col max-h-full"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-4">
+                   <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl text-emerald-600">
+                      <MapPin className="w-6 h-6" />
+                   </div>
+                   <div>
+                      <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Định vị địa chỉ</h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Kéo thả ghim hoặc sử dụng GPS để lấy vị trí chính xác</p>
+                   </div>
+                </div>
+                <div className="flex gap-3">
+                   <Button 
+                     variant="outline" 
+                     size="sm" 
+                     onClick={handleGetCurrentLocation}
+                     disabled={locationLoading}
+                     className="rounded-xl font-black uppercase text-[9px] tracking-widest border-slate-100 hover:bg-blue-50"
+                   >
+                     {locationLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Zap className="w-3 h-3 mr-1.5 text-blue-600" />}
+                     Sử dụng GPS
+                   </Button>
+                   <button onClick={() => setIsMapModalOpen(false)} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 transition-all">
+                     <X className="w-5 h-5" />
+                   </button>
+                </div>
+              </div>
+
+              <div id="checkout-map" className="flex-1 min-h-[400px] z-0 shadow-inner" />
+
+              <div className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                 <div className="flex flex-col md:flex-row gap-6 items-center">
+                    <div className="flex-1 space-y-2">
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vị trí hiện tại:</p>
+                       <div className="flex items-center gap-3">
+                          {geocoding ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300 line-clamp-2">{tempAddress || 'Đang lấy địa chỉ...'}</p>
+                       </div>
+                    </div>
+                    <Button 
+                      onClick={handleMapConfirm}
+                      disabled={geocoding || !tempAddress}
+                      className="w-full md:w-auto h-14 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"
+                    >
+                      Xác nhận vị trí
+                    </Button>
+                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Processing Overlay */}
+      <AnimatePresence>
+        {isPlacing && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-white/60 backdrop-blur-xl"
+          >
+            <div className="text-center space-y-8">
+               <div className="relative w-24 h-24 mx-auto">
+                  <div className="absolute inset-0 border-8 border-blue-100 rounded-full" />
+                  <div className="absolute inset-0 border-8 border-blue-600 rounded-full border-t-transparent animate-spin" />
+               </div>
+               <div className="space-y-2">
+                  <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Đang xử lý đơn hàng</h2>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Vui lòng không tắt trình duyệt</p>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
+function CheckCircle2({ className }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
+}
+
+function Check({ className }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
 
 export default Checkout;

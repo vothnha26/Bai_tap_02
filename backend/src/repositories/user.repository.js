@@ -110,8 +110,8 @@ class UserRepository {
       });
     }
 
-    // Update fields
-    const fields = ['street', 'province', 'provinceCode', 'ward', 'wardCode', 'fullText', 'coordinates'];
+    // Update fields (district/districtCode removed — VN admin reform 2025)
+    const fields = ['street', 'province', 'provinceCode', 'ward', 'wardCode', 'fullText', 'phone', 'coordinates', 'isDefault'];
     fields.forEach(field => {
       if (addressData[field] !== undefined) {
         address.set(field, addressData[field]);

@@ -29,11 +29,11 @@ class OrderService {
     return context.order;
   }
 
-  async getUserOrders(userId) {
-    const orders = await orderRepository.findByUserId(userId);
+  async getUserOrders(userId, options = {}) {
+    const { orders, total, page, limit } = await orderRepository.findByUserId(userId, options);
     // Check auto-confirmation
     const updatedOrders = await Promise.all(orders.map(order => this._checkAutoConfirm(order)));
-    return updatedOrders;
+    return { orders: updatedOrders, total, page, limit };
   }
 
   async getOrderById(orderId, userId) {

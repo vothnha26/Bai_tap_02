@@ -25,7 +25,7 @@ class UserAddressController {
   async addAddress(req, res, next) {
     try {
       const userId = req.user.id;
-      const { street, province, provinceCode, ward, wardCode, fullText, isDefault, coordinates } = req.body;
+      const { street, province, provinceCode, ward, wardCode, fullText, isDefault, coordinates, phone } = req.body;
 
       if (!street || !province || !provinceCode || !ward || !wardCode || !fullText) {
         return res.status(400).json({ message: ERROR_MESSAGES.INVALID_ADDRESS_DATA });
@@ -39,7 +39,8 @@ class UserAddressController {
         wardCode,
         fullText,
         isDefault,
-        coordinates
+        coordinates,
+        phone
       });
 
       res.status(201).json({ addresses });
@@ -55,7 +56,7 @@ class UserAddressController {
     try {
       const userId = req.user.id;
       const { addressId } = req.params;
-      const { street, province, provinceCode, ward, wardCode, fullText, isDefault, coordinates } = req.body;
+      const { street, province, provinceCode, ward, wardCode, fullText, isDefault, coordinates, phone } = req.body;
 
       if (!street || !province || !provinceCode || !ward || !wardCode || !fullText) {
         return res.status(400).json({ message: ERROR_MESSAGES.INVALID_ADDRESS_DATA });
@@ -69,7 +70,8 @@ class UserAddressController {
         wardCode,
         fullText,
         isDefault,
-        coordinates
+        coordinates,
+        phone
       });
 
       res.status(200).json({ addresses });

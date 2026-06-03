@@ -83,4 +83,18 @@ const ERROR_MESSAGES = {
 
 Hệ thống đã được bao phủ hoàn toàn bởi các bộ Test Suite:
 1. **Unit Test cho Repository:** [user_address.test.js](file:///D:/Fullit/tutorials/PubliCast/backend/src/tests/user_address.test.js) (5/5 PASS)
-2. **Integration Test cho API Endpoints:** [user_address_api.test.js](file:///D:/Fullit/tutorials/PubliCast/backend/src/tests/user_address_api.test.js) (5/5 PASS)
+---
+
+## 🛠️ 6. Ghi chú Sửa lỗi & Tương thích (Bug Fixes & Compatibility)
+
+### Lỗi thiếu Số điện thoại (Phone Field Missing)
+Trong phiên bản trước, trường `phone` bị bỏ sót trong quá trình trích xuất dữ liệu tại Controller, dẫn đến việc địa chỉ lưu vào DB không có SĐT giao hàng.
+
+**Giải pháp Backend:**
+Đã cập nhật `userAddress.controller.js` để trích xuất tường minh trường `phone` từ `req.body` trong cả hai hàm `addAddress` và `updateAddress` `(backend/src/controllers/userAddress.controller.js:14, 52)`.
+
+**Giải pháp Frontend (Graceful Degradation):**
+Tại trang Checkout, hệ thống đã được trang bị cơ chế xử lý dữ liệu cũ (Legacy Data):
+- **AddressSelector**: Nếu phát hiện địa chỉ bị thiếu trường `phone`, hệ thống sẽ hiển thị cảnh báo đỏ **"Chưa cập nhật SĐT"** thay vì để trống, giúp người dùng nhận biết và quay lại cập nhật thông tin `(frontend/src/pages/Checkout/components/AddressSelector.jsx:21)`.
+- **Auto-fill**: Khi chọn địa chỉ hợp lệ, SĐT sẽ được tự động điền vào form thanh toán để đảm bảo quy trình CoR (Chain of Responsibility) diễn ra thông suốt.
+
