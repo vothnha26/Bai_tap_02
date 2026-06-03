@@ -9,7 +9,7 @@ yarn-error.log*
 .idea/
 .vscode/
 # antigravity-awesome-skills/
-conductor/
+# conductor/
 
 # Documentation and temporary files
 *.puml

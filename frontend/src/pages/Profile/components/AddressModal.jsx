@@ -152,8 +152,8 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress, provinces: init
         setTempAddress(res.data.display_name);
         const addr = res.data.address;
         setTempComponents({
-          province: addr.state || addr.province || addr.city || '',
-          ward: addr.quarter || addr.neighbourhood || addr.suburb || addr.village || ''
+          province: addr.state || addr.city || addr.province || '',
+          ward: addr.suburb || addr.quarter || addr.village || addr.neighbourhood || addr.residential || addr.hamlet || ''
         });
       }
     } catch (err) {
@@ -164,23 +164,58 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress, provinces: init
   };
 
   const handleMapConfirm = () => {
-    if (tempCoordinates && tempComponents) {
-      const normProvince = normalizeAdminName(tempComponents.province);
-      const matchedProv = provinces.find((p) => {
-        const normP = normalizeAdminName(p.name);
-        return normP === normProvince || normP.includes(normProvince) || normProvince.includes(normP);
-      });
+    if (tempCoordinates && tempAddress) {
+      const addressParts = tempAddress.split(',').map(s => s.trim());
+      
+      let matchedProv = null;
+      // 1. Dựa vào address components từ Nominatim
+      if (tempComponents && tempComponents.province) {
+        const normProvince = normalizeAdminName(tempComponents.province);
+        matchedProv = provinces.find((p) => {
+          const normP = normalizeAdminName(p.name);
+          return normP === normProvince || normP.includes(normProvince) || normProvince.includes(normP);
+        });
+      }
+      
+      // 2. Nếu không tìm thấy, quét qua các phần của display_name
+      if (!matchedProv) {
+        for (const p of provinces) {
+          const normP = normalizeAdminName(p.name);
+          // Tìm trong 3 phần cuối của địa chỉ (thường chứa Tỉnh/Thành phố)
+          const lastParts = addressParts.slice(-3);
+          const found = lastParts.some(part => {
+            const normPart = normalizeAdminName(part);
+            return normPart && (normPart === normP || normPart.includes(normP) || normP.includes(normPart));
+          });
+          if (found) {
+            matchedProv = p;
+            break;
+          }
+        }
+      }
 
       setFormData(prev => ({
         ...prev,
         coordinates: tempCoordinates,
         street: tempAddress,
         province: matchedProv ? matchedProv.name : prev.province,
-        provinceCode: matchedProv ? matchedProv.code.toString() : prev.provinceCode
+        provinceCode: matchedProv ? matchedProv.code.toString() : prev.provinceCode,
+        // Reset ward khi đổi tỉnh từ bản đồ
+        ward: matchedProv ? '' : prev.ward,
+        wardCode: matchedProv ? '' : prev.wardCode
       }));
 
       if (matchedProv) {
-        targetWardName.current = tempComponents.ward;
+        let bestWardStr = tempComponents ? tempComponents.ward : '';
+        // Nếu Nominatim không trả về ward rõ ràng, thử tìm trong display_name
+        if (!bestWardStr) {
+          const wardPart = addressParts.find(p => p.toLowerCase().match(/^(phường|xã|thị trấn)\s/i));
+          if (wardPart) bestWardStr = wardPart;
+          else if (addressParts.length >= 4) {
+            bestWardStr = addressParts[addressParts.length - 4]; // Guess ward position
+          }
+        }
+        targetWardName.current = bestWardStr;
       }
       setIsMapOpen(false);
     }

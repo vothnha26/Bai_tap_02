@@ -209,7 +209,7 @@ const Checkout = () => {
     );
   };
 
-  // Normalize tên hành chính VN: bỏ prefix Tỉnh/Thành phố/Phường/Xã/Quận...
+  // Normalize tên hành chính Việt Nam
   const normalizeAdminName = (str = '') =>
     str
       .toLowerCase()
@@ -270,7 +270,7 @@ const Checkout = () => {
     }
   };
 
-  // Fetch wards khi province thay đổi (API v2 — Flattened view, bỏ qua bước chọn Quận)
+  // Fetch wards khi province thay đổi (API v2 — Flattened view)
   useEffect(() => {
     const fetchWards = async () => {
       if (!selectedProvince) {
